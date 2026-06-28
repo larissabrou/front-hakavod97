@@ -54,7 +54,7 @@ export const ProductCard = ({ product }) => {
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Conteneur Image */}
-      <div className="relative aspect-[3/4] w-full overflow-hidden bg-neutral-100 rounded-sm">
+      <div className="relative aspect-[3/4] w-full overflow-hidden bg-neutral-100 rounded-none border border-neutral-100/50">
         <Link to={`/product/${product.id}`}>
           <img
             src={
@@ -65,7 +65,7 @@ export const ProductCard = ({ product }) => {
                 : product.image
             }
             alt={product.name}
-            className="h-full w-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105"
+            className="h-full w-full object-cover object-center transition-transform duration-700 ease-out group-hover:scale-103"
             loading="lazy"
             onError={handleImageError}
           />
@@ -73,18 +73,18 @@ export const ProductCard = ({ product }) => {
  
         {/* Badges de Réduction/Nouveautés */}
         {discount > 0 && (
-          <span className="absolute top-3 left-3 bg-accent text-white text-xs font-bold px-2 py-1 tracking-wider uppercase">
+          <span className="absolute top-3 left-3 bg-neutral-900 text-white text-[9px] font-black px-2 py-0.5 tracking-wider uppercase rounded-none z-10">
             -{discount}%
           </span>
         )}
 
         {/* Badge Stock Trendyol-style */}
         {totalStock === 0 ? (
-          <span className={`absolute ${discount > 0 ? 'top-11' : 'top-3'} left-3 bg-neutral-900/90 backdrop-blur-xs text-white text-[9px] font-extrabold px-2 py-0.5 tracking-wider uppercase z-10`}>
+          <span className={`absolute ${discount > 0 ? 'top-9' : 'top-3'} left-3 bg-neutral-900/80 backdrop-blur-xs text-white text-[8px] font-bold px-2 py-0.5 tracking-wider uppercase z-10 rounded-none`}>
             {activeLocale === 'en' ? 'Sold Out' : 'Rupture'}
           </span>
         ) : totalStock <= 5 ? (
-          <span className={`absolute ${discount > 0 ? 'top-11' : 'top-3'} left-3 bg-amber-500 text-white text-[9px] font-black px-2 py-0.5 tracking-wider uppercase animate-pulse shadow-sm z-10`}>
+          <span className={`absolute ${discount > 0 ? 'top-9' : 'top-3'} left-3 bg-amber-500 text-white text-[8px] font-black px-2 py-0.5 tracking-wider uppercase shadow-sm z-10 rounded-none`}>
             {activeLocale === 'en' ? `Only ${totalStock} left!` : `Plus que ${totalStock} !`}
           </span>
         ) : null}
@@ -92,30 +92,30 @@ export const ProductCard = ({ product }) => {
         {/* Bouton Favoris */}
         <button
           onClick={handleToggleFav}
-          className="absolute top-3 right-3 p-2 bg-white/80 hover:bg-white rounded-full shadow-xs transition-colors duration-200 z-10"
+          className="absolute top-3 right-3 w-8 h-8 bg-white border border-neutral-100/80 hover:border-neutral-900 rounded-full flex items-center justify-center shadow-xs transition-all duration-200 z-10 cursor-pointer"
           title={favorited ? (activeLocale === 'en' ? "Remove from favorites" : "Retirer des favoris") : (activeLocale === 'en' ? "Add to favorites" : "Ajouter aux favoris")}
         >
           <Heart
-            className={`w-4 h-4 transition-colors ${
+            className={`w-3.5 h-3.5 transition-colors ${
               favorited ? "fill-red-500 text-red-500" : "text-neutral-600 hover:text-red-500"
             }`}
           />
         </button>
 
         {/* Bouton Ajout Rapide en Hover (style Defacto) */}
-        <div className="absolute bottom-0 inset-x-0 p-4 transition-all duration-300 translate-y-full group-hover:translate-y-0 bg-gradient-to-t from-black/20 to-transparent">
+        <div className="absolute bottom-0 inset-x-0 p-3 transition-all duration-300 translate-y-full group-hover:translate-y-0 bg-gradient-to-t from-black/5 to-transparent z-10">
           {totalStock > 0 ? (
             <button
               onClick={handleQuickAdd}
-              className="w-full flex items-center justify-center gap-2 bg-white hover:bg-primary text-primary hover:text-white text-sm font-semibold py-3 transition-colors duration-200 rounded-sm shadow-md cursor-pointer"
+              className="w-full flex items-center justify-center gap-1.5 bg-white hover:bg-neutral-900 text-neutral-900 hover:text-white text-[10px] font-bold uppercase tracking-wider py-2.5 transition-all duration-200 border border-neutral-200 hover:border-neutral-900 rounded-none shadow-sm cursor-pointer"
             >
-              <ShoppingBag className="w-4 h-4" />
+              <ShoppingBag className="w-3.5 h-3.5" />
               {activeLocale === 'en' ? 'Quick Add' : 'Ajout Rapide'}
             </button>
           ) : (
             <button
               disabled
-              className="w-full flex items-center justify-center gap-2 bg-neutral-100 text-neutral-400 text-sm font-semibold py-3 rounded-sm shadow-md cursor-not-allowed border border-neutral-200"
+              className="w-full flex items-center justify-center gap-1.5 bg-neutral-50 text-neutral-400 text-[10px] font-bold uppercase tracking-wider py-2.5 rounded-none border border-neutral-200 cursor-not-allowed"
             >
               {activeLocale === 'en' ? 'Out of Stock' : 'Indisponible'}
             </button>
@@ -124,27 +124,27 @@ export const ProductCard = ({ product }) => {
       </div>
 
       {/* Détails du Produit */}
-      <div className="flex flex-col pt-3 pb-2 text-left">
+      <div className="flex flex-col pt-2.5 pb-2 text-left">
         {/* Marque / Collection */}
-        <span className="text-[11px] font-bold text-neutral-400 uppercase tracking-widest">
+        <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">
           {product.brand || 'Ha-kavod 97'}
         </span>
 
         {/* Nom du Produit */}
         <Link
           to={`/product/${product.id}`}
-          className="mt-1 text-sm font-medium text-neutral-800 hover:underline line-clamp-1"
+          className="mt-1 text-xs font-semibold text-neutral-700 hover:text-neutral-900 transition-colors line-clamp-1"
         >
           {product.name}
         </Link>
 
-        {/* Couleurs (pastilles) */}
+        {/* Couleurs (pastilles carrées style Defacto) */}
         {product.colors && product.colors.length > 0 && (
-          <div className="flex gap-1.5 mt-2">
+          <div className="flex gap-1.5 mt-2.5">
             {product.colors.map((color, index) => (
               <span
                 key={index}
-                className="w-3.5 h-3.5 rounded-full border border-neutral-300 ring-offset-1 group-hover:ring-1 transition-all"
+                className="w-2.5 h-2.5 border border-neutral-200/80 rounded-none pointer-events-none"
                 style={{ backgroundColor: color.code }}
                 title={translateColor(color.name, activeLocale)}
               />
@@ -153,10 +153,10 @@ export const ProductCard = ({ product }) => {
         )}
 
         {/* Prix */}
-        <div className="flex items-center gap-2 mt-2">
-          <span className="text-base font-semibold text-neutral-900">{formatPrice(product.price)}</span>
+        <div className="flex items-baseline gap-2 mt-2">
+          <span className="text-sm font-extrabold text-neutral-900">{formatPrice(product.price)}</span>
           {product.old_price && (
-            <span className="text-sm text-neutral-400 line-through">
+            <span className="text-[10px] text-neutral-400 line-through font-medium">
               {formatPrice(product.old_price)}
             </span>
           )}
@@ -164,19 +164,19 @@ export const ProductCard = ({ product }) => {
 
         {/* Indicateur de stock restant */}
         <div className="mt-2 flex items-center gap-1.5 text-xs">
-          <span className={`w-1.5 h-1.5 rounded-full ${
-            totalStock === 0 ? 'bg-danger animate-pulse' :
+          <span className={`w-1 h-1 rounded-full ${
+            totalStock === 0 ? 'bg-red-500 animate-pulse' :
             totalStock <= 5 ? 'bg-amber-500' :
-            'bg-accent'
+            'bg-emerald-500'
           }`} />
-          <span className={`text-[10px] font-bold uppercase tracking-wider ${
-            totalStock === 0 ? 'text-danger font-extrabold' :
-            totalStock <= 5 ? 'text-amber-600 font-extrabold' :
-            'text-neutral-500'
+          <span className={`text-[8.5px] font-bold uppercase tracking-wider ${
+            totalStock === 0 ? 'text-red-500 font-black' :
+            totalStock <= 5 ? 'text-amber-600 font-black' :
+            'text-neutral-400'
           }`}>
-            {totalStock === 0 ? (activeLocale === 'en' ? 'Out of stock' : 'Rupture de stock') :
-             totalStock <= 5 ? (activeLocale === 'en' ? `Almost sold out (${totalStock} left)` : `Presque épuisé (${totalStock} restants)`) :
-             (activeLocale === 'en' ? `${totalStock} in stock` : `${totalStock} en stock`)}
+            {totalStock === 0 ? (activeLocale === 'en' ? 'Out of stock' : 'Rupture') :
+             totalStock <= 5 ? (activeLocale === 'en' ? `Almost sold out` : `Presque épuisé`) :
+             (activeLocale === 'en' ? `In stock` : `Disponible`)}
           </span>
         </div>
       </div>
