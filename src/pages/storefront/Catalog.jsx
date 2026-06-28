@@ -286,7 +286,7 @@ export const Catalog = () => {
           {/* Sorting dropdown */}
           <div className="flex items-center gap-2 mt-3 sm:mt-0">
             <label className="text-xs font-semibold uppercase text-neutral-400">{t('sort_by')}</label>
-            <select className="border border-neutral-200 rounded-sm text-xs py-1.5 px-3 bg-white focus:outline-none focus:ring-1 focus:ring-primary">
+            <select className="border border-neutral-200 rounded-sm text-xs py-1.5 px-3 bg-white focus:outline-none focus:ring-1 focus:ring-primary select-no-arrow">
               <option>{t('sort_new')}</option>
               <option>{t('sort_price_asc')}</option>
               <option>{t('sort_price_desc')}</option>

@@ -269,3 +269,8 @@ select {
   background-size: 0.9rem;
   padding-right: 2rem !important;
 }
+
+.select-no-arrow {
+  background-image: none !important;
+  padding-right: 0.75rem !important;
+}
