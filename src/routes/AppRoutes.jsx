@@ -11,6 +11,19 @@ import { useSettings } from '../hooks/useSettings';
 import { useFavorites } from '../hooks/useFavorites';
 import { useCustomerAuth } from '../hooks/useCustomerAuth';
 
+const COUNTRY_INFO = {
+  CI: { flag: '🇨🇮', dial: '+225' },
+  FR: { flag: '🇫🇷', dial: '+33' },
+  US: { flag: '🇺🇸', dial: '+1' },
+  GB: { flag: '🇬🇧', dial: '+44' },
+  DE: { flag: '🇩🇪', dial: '+49' },
+  SN: { flag: '🇸🇳', dial: '+221' },
+  ML: { flag: '🇲🇱', dial: '+223' },
+  BF: { flag: '🇧🇫', dial: '+226' },
+  GH: { flag: '🇬🇭', dial: '+233' },
+  NG: { flag: '🇳🇬', dial: '+234' }
+};
+
 const DEFAULT_FOOTER_CONFIG = {
   description: "Maison de haute couture et de maroquinerie d'exception. HA-KAVOD 97 incarne l'alliance parfaite de l'élégance intemporelle et du raffinement contemporain.",
   phone: "0850 333 22 86",
@@ -161,16 +174,24 @@ const StorefrontLayout = ({ children }) => {
       const fetchCountries = async () => {
         try {
           const data = await customerService.getCountries();
-          setCountries(data || []);
-          if (data && data.length > 0) {
+          const mappedData = (data || []).map(c => {
+            const info = COUNTRY_INFO[c.code] || { flag: '', dial: c.phone_code || '' };
+            return {
+              ...c,
+              phone_code: c.phone_code || info.dial || '',
+              flag: info.flag || ''
+            };
+          });
+          setCountries(mappedData);
+          if (mappedData.length > 0) {
             // Utiliser le premier pays par défaut ou Côte d'Ivoire
-            const ci = data.find(c => c.code === 'CI');
+            const ci = mappedData.find(c => c.code === 'CI');
             if (ci) {
               setAuthCountry('CI');
-              setAuthCountryCode(ci.phone_code);
+              setAuthCountryCode(ci.phone_code || '+225');
             } else {
-              setAuthCountry(data[0].code);
-              setAuthCountryCode(data[0].phone_code);
+              setAuthCountry(mappedData[0].code);
+              setAuthCountryCode(mappedData[0].phone_code || '+225');
             }
           }
         } catch (e) {
@@ -922,13 +943,16 @@ const StorefrontLayout = ({ children }) => {
                                   className="py-2.5 px-3 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary rounded-lg transition-all font-light bg-white focus:outline-none max-w-[100px]"
                                 >
                                   {countries.length > 0 ? (
-                                    countries.map((c) => (
-                                      <option key={c.code} value={c.code}>
-                                        {c.code} ({c.phone_code})
-                                      </option>
-                                    ))
+                                    countries.map((c) => {
+                                      const formattedDial = c.phone_code ? (c.phone_code.startsWith('+') ? c.phone_code : '+' + c.phone_code) : '';
+                                      return (
+                                        <option key={c.code} value={c.code}>
+                                          {c.flag} {c.code} ({formattedDial})
+                                        </option>
+                                      );
+                                    })
                                   ) : (
-                                    <option value="CI">CI (+225)</option>
+                                    <option value="CI">🇨🇮 CI (+225)</option>
                                   )}
                                 </select>
                                 <input
@@ -1053,13 +1077,16 @@ const StorefrontLayout = ({ children }) => {
                                       className="py-2.5 px-3 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary rounded-lg transition-all font-light bg-white focus:outline-none max-w-[100px]"
                                     >
                                       {countries.length > 0 ? (
-                                        countries.map((c) => (
-                                          <option key={c.code} value={c.code}>
-                                            {c.code} ({c.phone_code})
-                                          </option>
-                                        ))
+                                        countries.map((c) => {
+                                          const formattedDial = c.phone_code ? (c.phone_code.startsWith('+') ? c.phone_code : '+' + c.phone_code) : '';
+                                          return (
+                                            <option key={c.code} value={c.code}>
+                                              {c.flag} {c.code} ({formattedDial})
+                                            </option>
+                                          );
+                                        })
                                       ) : (
-                                        <option value="CI">CI (+225)</option>
+                                        <option value="CI">🇨🇮 CI (+225)</option>
                                       )}
                                     </select>
                                     <input
