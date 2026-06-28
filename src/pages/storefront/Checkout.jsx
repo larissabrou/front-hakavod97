@@ -968,18 +968,57 @@ export const Checkout = () => {
               {c.shipping_address_ci}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Vos adresses enregistrées */}
+              {/* Vos adresses enregistrées - Style Defacto */}
               {isAuthenticated && savedAddresses.length > 0 && (
-                <div className="md:col-span-2 flex flex-col gap-1.5 text-left mb-2">
-                  <label className="text-[10px] font-bold text-neutral-600 uppercase tracking-widest">
-                    Vos adresses enregistrées
+                <div className="md:col-span-2 flex flex-col gap-3 text-left mb-4">
+                  <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
+                    Vos adresses de livraison enregistrées
                   </label>
-                  <select
-                    value={selectedAddressId}
-                    onChange={(e) => {
-                      const id = e.target.value;
-                      setSelectedAddressId(id);
-                      if (id === 'new') {
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    {savedAddresses.map((a) => {
+                      const isSelected = String(selectedAddressId) === String(a.id);
+                      return (
+                        <div
+                          key={a.id}
+                          onClick={() => {
+                            setSelectedAddressId(a.id);
+                            prefillFormWithAddress(a);
+                          }}
+                          className={`p-3.5 border cursor-pointer transition-all flex flex-col justify-between min-h-[105px] select-none relative ${
+                            isSelected
+                              ? 'border-neutral-900 bg-neutral-900/[0.02] shadow-xs'
+                              : 'border-neutral-200 hover:border-neutral-300 bg-white'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start gap-2">
+                            <span className="text-[11px] font-bold text-neutral-800 truncate block max-w-[80%]">
+                              {a.customer_name}
+                            </span>
+                            {a.is_default && (
+                              <span className="bg-neutral-100 text-neutral-600 text-[8px] font-bold uppercase px-1 py-0.5 tracking-wider shrink-0">
+                                Défaut
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-neutral-500 font-semibold mt-1.5 leading-relaxed break-words line-clamp-2">
+                            {a.shipping_address}
+                          </div>
+                          <div className="text-[10.5px] text-neutral-600 font-bold mt-2 font-mono">
+                            {a.customer_phone}
+                          </div>
+                          {isSelected && (
+                            <div className="absolute bottom-2 right-2 bg-neutral-900 text-white p-0.5 rounded-none flex items-center justify-center">
+                              <Check className="w-3 h-3 stroke-[3]" />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                    
+                    {/* Option pour nouvelle adresse */}
+                    <div
+                      onClick={() => {
+                        setSelectedAddressId('new');
                         setFormData(prev => ({
                           ...prev,
                           firstname: '',
@@ -989,23 +1028,19 @@ export const Checkout = () => {
                         }));
                         setSelectedRegion('');
                         setSelectedCommune('');
-                      } else {
-                        const selected = savedAddresses.find(a => String(a.id) === String(id));
-                        if (selected) {
-                          prefillFormWithAddress(selected);
-                        }
-                      }
-                    }}
-                    className="w-full border border-neutral-200 rounded-none py-2 px-3 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary h-11 select-no-arrow"
-                  >
-                    {savedAddresses.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.is_default ? '🏠 [Adresse par défaut] ' : '📍 '}
-                        {a.customer_name} - {a.shipping_address} ({a.customer_phone})
-                      </option>
-                    ))}
-                    <option value="new">➕ Saisir une autre adresse...</option>
-                  </select>
+                      }}
+                      className={`p-3.5 border border-dashed cursor-pointer transition-all flex flex-col items-center justify-center min-h-[105px] text-center select-none ${
+                        selectedAddressId === 'new'
+                          ? 'border-neutral-900 bg-neutral-900/[0.02] text-neutral-900 font-bold'
+                          : 'border-neutral-300 hover:border-neutral-400 bg-neutral-50/30 text-neutral-500'
+                      }`}
+                    >
+                      <span className="text-xl font-light mb-1">+</span>
+                      <span className="text-[10.5px] font-bold uppercase tracking-wider">
+                        Nouvelle adresse
+                      </span>
+                    </div>
+                  </div>
                 </div>
               )}
 
