@@ -672,7 +672,7 @@ export const MainDashboard = () => {
     size: 'Standard',
     color: 'N/A',
     shipping_cost: 3000,
-    payment_method: 'Visa',
+    payment_method: 'Orange Money',
     status: 'pending'
   });
 
@@ -1469,7 +1469,7 @@ export const MainDashboard = () => {
             total: 102100,
             subtotal: 99100,
             shipping_cost: 3000,
-            payment_method: 'Mastercard',
+            payment_method: 'Carte Bancaire',
             status: 'cancelled',
             created_at: '2022-04-20T16:05:00Z'
           },
@@ -1483,7 +1483,7 @@ export const MainDashboard = () => {
             total: 87400,
             subtotal: 84400,
             shipping_cost: 3000,
-            payment_method: 'Visa',
+            payment_method: 'Carte Bancaire',
             status: 'delivered',
             created_at: '2022-04-20T16:05:00Z'
           },
@@ -1497,7 +1497,7 @@ export const MainDashboard = () => {
             total: 34200,
             subtotal: 31200,
             shipping_cost: 3000,
-            payment_method: 'Mastercard',
+            payment_method: 'Carte Bancaire',
             status: 'inprogress',
             created_at: '2022-04-20T16:05:00Z'
           },
@@ -1511,7 +1511,7 @@ export const MainDashboard = () => {
             total: 37300,
             subtotal: 34300,
             shipping_cost: 3000,
-            payment_method: 'Visa',
+            payment_method: 'Carte Bancaire',
             status: 'pickups',
             created_at: '2022-04-20T16:05:00Z'
           },
@@ -1525,7 +1525,7 @@ export const MainDashboard = () => {
             total: 24700,
             subtotal: 21700,
             shipping_cost: 3000,
-            payment_method: 'Paypal',
+            payment_method: 'Wave',
             status: 'delivered',
             created_at: '2022-04-20T16:05:00Z'
           },
@@ -1539,7 +1539,7 @@ export const MainDashboard = () => {
             total: 18000,
             subtotal: 15000,
             shipping_cost: 3000,
-            payment_method: 'COD',
+            payment_method: 'Orange Money',
             status: 'returns',
             created_at: '2022-04-20T16:05:00Z'
           },
@@ -1553,7 +1553,7 @@ export const MainDashboard = () => {
             total: 124000,
             subtotal: 121000,
             shipping_cost: 3000,
-            payment_method: 'Visa',
+            payment_method: 'Carte Bancaire',
             status: 'inprogress',
             created_at: '2022-04-20T16:05:00Z'
           },
@@ -1567,7 +1567,7 @@ export const MainDashboard = () => {
             total: 40800,
             subtotal: 37800,
             shipping_cost: 3000,
-            payment_method: 'Mastercard',
+            payment_method: 'Moov Money',
             status: 'pickups',
             created_at: '2022-04-20T16:05:00Z'
           }
@@ -2204,7 +2204,7 @@ export const MainDashboard = () => {
       total: 125000,
       subtotal: 122000,
       shipping_cost: 3000,
-      payment_method: 'Visa',
+      payment_method: 'Orange Money',
       status: 'inprogress',
       created_at: new Date().toISOString()
     };
@@ -2247,7 +2247,7 @@ export const MainDashboard = () => {
       total,
       subtotal,
       shipping_cost: shipping,
-      payment_method: createOrderForm.payment_method || 'Visa',
+      payment_method: createOrderForm.payment_method || 'Orange Money',
       status: createOrderForm.status || 'pending',
       created_at: new Date().toISOString(),
       shipping_address: createOrderForm.shipping_address || '123 Rue des Jardins, Cocody, Abidjan',
@@ -4958,7 +4958,7 @@ export const MainDashboard = () => {
                           size: 'Standard',
                           color: 'N/A',
                           shipping_cost: 3000,
-                          payment_method: 'Visa',
+                          payment_method: 'Orange Money',
                           status: 'pending'
                         });
                       }}
@@ -5018,10 +5018,11 @@ export const MainDashboard = () => {
                     className="border border-neutral-200 px-3 py-1.5 w-full text-[11px] focus:outline-none focus:border-neutral-800 bg-white rounded-none text-neutral-700 font-semibold"
                   >
                     <option value="">Payment (All)</option>
-                    <option value="Mastercard">Mastercard</option>
-                    <option value="Visa">Visa</option>
-                    <option value="Paypal">Paypal</option>
-                    <option value="COD">COD</option>
+                    <option value="Orange Money">Orange Money</option>
+                    <option value="MTN Momo">MTN Momo</option>
+                    <option value="Moov Money">Moov Money</option>
+                    <option value="Wave">Wave</option>
+                    <option value="Carte Bancaire">Carte Bancaire</option>
                   </select>
 
                   <button
@@ -6009,10 +6010,11 @@ export const MainDashboard = () => {
                                   onChange={(e) => setCreateOrderForm(prev => ({ ...prev, payment_method: e.target.value }))}
                                   className="w-full border border-neutral-200 py-1.5 px-3 focus:outline-none focus:border-neutral-800 bg-white rounded-none text-[11px] font-bold text-neutral-700"
                                 >
-                                  <option value="Visa">Visa</option>
-                                  <option value="Mastercard">Mastercard</option>
-                                  <option value="Paypal">Paypal</option>
-                                  <option value="COD">COD</option>
+                                  <option value="Orange Money">Orange Money</option>
+                                  <option value="MTN Momo">MTN Momo</option>
+                                  <option value="Moov Money">Moov Money</option>
+                                  <option value="Wave">Wave</option>
+                                  <option value="Carte Bancaire">Carte Bancaire</option>
                                 </select>
                               </div>
                               <div className="space-y-1 col-span-1">
