@@ -755,7 +755,7 @@ export const Checkout = () => {
               c.payment_init_failed
             );
           }
-        } else if (paymentMethod === 'card') {
+        } else if (paymentMethod === 'Carte Bancaire') {
           // Paiement par carte bancaire réel via l'API (Visa/AggregPay)
           setLoading(false);
           setIsCardProcessing(true);
@@ -1068,10 +1068,10 @@ export const Checkout = () => {
                     )
                   },
                   { 
-                    id: 'card', 
+                    id: 'Carte Bancaire', 
                     title: c.card_title, 
                     desc: c.card_desc,
-                    logos: paymentMethod === 'card' ? null : (
+                    logos: paymentMethod === 'Carte Bancaire' ? null : (
                       <div className="flex gap-1.5 items-center shrink-0">
                         <div className="w-8 h-5.5 bg-transparent flex items-center justify-center" title="Visa">
                           <svg className="h-2.5 w-auto" viewBox="0 0 24 15" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1245,7 +1245,7 @@ export const Checkout = () => {
                     )}
 
                     {/* Infos Carte Bancaire */}
-                    {method.id === 'card' && paymentMethod === 'card' && (
+                    {method.id === 'Carte Bancaire' && paymentMethod === 'Carte Bancaire' && (
                       <div className="pl-8 pr-4 pt-3 pb-2 flex flex-col gap-3 animate-fade-in" onClick={(e) => e.stopPropagation()}>
                         <div className="bg-neutral-50 border border-neutral-200/50 p-5 rounded-none text-left flex flex-col gap-4">
                           
