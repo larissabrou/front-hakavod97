@@ -529,8 +529,10 @@ export const Checkout = () => {
           lang: activeLocale
         };
 
-        if (deliveryCountry === 'CI' && selectedCommune) {
-          payload.commune_id = Number(selectedCommune);
+        if (deliveryCountry === 'CI') {
+          payload.region = selectedRegion;
+          payload.commune = selectedCommune;
+          payload.commune_id = Number(selectedCommune) || null;
         }
 
         console.log('Checkout preview payload', payload);
@@ -689,6 +691,8 @@ export const Checkout = () => {
         customer_phone: formData.phone, // shipping phone
         shipping_address: formData.address,
         country: deliveryCountry,
+        region: deliveryCountry === 'CI' ? selectedRegion : '',
+        commune: deliveryCountry === 'CI' ? selectedCommune : '',
         commune_id: deliveryCountry === 'CI' ? (Number(selectedCommune) || 1) : 1,
         notes: formData.notes,
         currency: activeCurrency,
