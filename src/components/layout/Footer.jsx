@@ -75,7 +75,7 @@ export const Footer = () => {
           <img
             src="/logo.png"
             alt="HA-KAVOD 97 Logo"
-            className="h-28 w-auto object-contain self-start transition-transform duration-300 hover:scale-105 border-2 border-white p-1 rounded-none bg-white"
+            className="h-28 w-auto object-contain self-start transition-transform duration-300 hover:scale-105 bg-transparent"
           />
           <div>
             <h4 className="font-bold text-white uppercase tracking-widest text-xs">Ha‑kavod 97</h4>

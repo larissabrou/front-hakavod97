@@ -1200,7 +1200,7 @@ const StorefrontLayout = ({ children }) => {
             <img
               src="/logo.png"
               alt="HA-KAVOD 97 Logo"
-              className="h-16 w-auto object-contain self-start border border-white p-0.5 rounded-none bg-white"
+              className="h-16 w-auto object-contain self-start bg-transparent"
             />
             <div>
               <p className="leading-relaxed text-neutral-400 text-[10.5px]">
@@ -1293,29 +1293,29 @@ const StorefrontLayout = ({ children }) => {
           {/* Logos de paiement */}
           <div className="flex gap-2 items-center opacity-70 hover:opacity-100 transition-opacity">
             {/* Orange Money */}
-            <div className="w-10 h-6.5 bg-black rounded-xs flex items-center justify-center border border-neutral-800" title="Orange Money">
+            <div className="w-10 h-6.5 flex items-center justify-center bg-transparent" title="Orange Money">
               <img src="/orange.png" alt="Orange Money" className="h-4.5 w-auto object-contain" />
             </div>
             {/* MTN */}
-            <div className="w-10 h-6.5 bg-white rounded-xs flex items-center justify-center border border-neutral-800" title="MTN Mobile Money">
+            <div className="w-10 h-6.5 flex items-center justify-center bg-transparent" title="MTN Mobile Money">
               <img src="/momo.png" alt="MTN MoMo" className="h-4.5 w-auto object-contain" />
             </div>
             {/* Moov */}
-            <div className="w-10 h-6.5 bg-white rounded-xs flex items-center justify-center border border-neutral-800" title="Moov Money">
+            <div className="w-10 h-6.5 flex items-center justify-center bg-transparent" title="Moov Money">
               <img src="/moov.png" alt="Moov Money" className="h-4.5 w-auto object-contain" />
             </div>
             {/* Wave */}
-            <div className="w-10 h-6.5 bg-white rounded-xs flex items-center justify-center border border-neutral-800" title="Wave">
+            <div className="w-10 h-6.5 flex items-center justify-center bg-transparent" title="Wave">
               <img src="/wave.png" alt="Wave" className="h-5 w-auto object-contain" />
             </div>
             {/* Visa */}
-            <div className="w-10 h-6.5 bg-white rounded-xs flex items-center justify-center border border-neutral-800 shadow-2xs" title="Visa">
+            <div className="w-10 h-6.5 flex items-center justify-center bg-transparent" title="Visa">
               <svg className="h-2.5 w-auto" viewBox="0 0 24 15" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M10.15 11.24L11.52 3.12H9.33L7.96 11.24H10.15ZM17.15 3.32C16.73 3.15 15.93 2.97 14.99 2.97C12.78 2.97 11.22 4.09 11.2 5.68C11.18 6.86 12.28 7.52 13.13 7.91C14 8.32 14.3 8.59 14.3 8.97C14.29 9.54 13.57 9.8 12.92 9.8C12.01 9.8 11.49 9.56 11.07 9.38L10.74 10.87C11.17 11.06 12.11 11.23 13.09 11.23C15.42 11.23 16.94 10.14 16.96 8.44C16.98 7.02 15.89 6.27 14.88 5.81C14.05 5.4 13.75 5.15 13.75 4.83C13.75 4.34 14.36 4.06 14.97 4.06C15.7 4.06 16.23 4.19 16.63 4.36L17.15 3.32ZM22.5 3.12H20.42C19.78 3.12 19.34 3.3 19.06 3.93L15.98 11.24H18.27L18.73 10.02H21.52L21.78 11.24H23.78L22.5 3.12ZM19.36 8.36L20.49 5.37L21.14 8.36H19.36ZM6.35 3.12L4.08 8.65L3.84 7.42C3.42 5.92 2.1 3.93 0.6 3.16L2.83 11.23H5.13L8.55 3.12H6.35Z" fill="#1434CB"/>
               </svg>
             </div>
             {/* Mastercard */}
-            <div className="w-10 h-6.5 bg-white rounded-xs flex items-center justify-center border border-neutral-800 shadow-2xs" title="Mastercard">
+            <div className="w-10 h-6.5 flex items-center justify-center bg-transparent" title="Mastercard">
               <svg className="h-4 w-auto" viewBox="0 0 24 15" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="8" cy="7.5" r="6" fill="#EB001B" />
                 <circle cx="16" cy="7.5" r="6" fill="#F79E1B" />
@@ -1323,7 +1323,7 @@ const StorefrontLayout = ({ children }) => {
               </svg>
             </div>
             {/* American Express */}
-            <div className="w-10 h-6.5 bg-white rounded-xs flex items-center justify-center border border-neutral-800 shadow-2xs" title="American Express">
+            <div className="w-10 h-6.5 flex items-center justify-center bg-transparent" title="American Express">
               <svg className="h-2.5 w-auto" viewBox="0 0 24 15" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <rect width="24" height="15" rx="1.5" fill="#016FD0" />
                 <text x="12" y="10" fill="white" fontSize="5.5" fontWeight="900" fontFamily="sans-serif" textAnchor="middle" letterSpacing="0.2">AMEX</text>
