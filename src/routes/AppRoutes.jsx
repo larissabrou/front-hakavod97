@@ -417,34 +417,54 @@ const StorefrontLayout = ({ children }) => {
           {/* Actions Client (Droite) */}
           <div className="flex items-center gap-6">
             {/* Sélecteur de Devise */}
-            <select
-              value={activeCurrency}
-              onChange={(e) => changeCurrency(e.target.value)}
-              className={`text-xs bg-transparent border-0 font-bold uppercase cursor-pointer focus:outline-none focus:ring-0 header-select ${
-                isHeaderTransparent ? 'text-white/70 hover:text-white' : 'text-neutral-500 hover:text-neutral-900'
-              }`}
-            >
-              {currencies.map(c => (
-                <option key={c.code} value={c.code} className="text-neutral-900 bg-white font-semibold">
-                  {c.code}
-                </option>
-              ))}
-            </select>
+            <div className="relative flex items-center gap-1 cursor-pointer group">
+              <span className={`text-[11px] font-medium uppercase tracking-wider transition-colors ${
+                isHeaderTransparent ? 'text-white/70 group-hover:text-white' : 'text-neutral-500 group-hover:text-neutral-900'
+              }`}>
+                {activeCurrency}
+              </span>
+              <svg className={`w-2.5 h-2.5 transition-colors ${
+                isHeaderTransparent ? 'text-white/40 group-hover:text-white/80' : 'text-neutral-400 group-hover:text-neutral-600'
+              }`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+              </svg>
+              <select
+                value={activeCurrency}
+                onChange={(e) => changeCurrency(e.target.value)}
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+              >
+                {currencies.map(c => (
+                  <option key={c.code} value={c.code} className="text-neutral-900 bg-white font-semibold">
+                    {c.code}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             {/* Sélecteur de Langue */}
-            <select
-              value={activeLocale}
-              onChange={(e) => changeLocale(e.target.value)}
-              className={`text-xs bg-transparent border-0 font-bold uppercase cursor-pointer focus:outline-none focus:ring-0 header-select ${
-                isHeaderTransparent ? 'text-white/70 hover:text-white' : 'text-neutral-500 hover:text-neutral-900'
-              }`}
-            >
-              {locales.map(l => (
-                <option key={l.code} value={l.code} className="text-neutral-900 bg-white font-semibold">
-                  {l.code === 'en' ? 'ENG' : 'FR'}
-                </option>
-              ))}
-            </select>
+            <div className="relative flex items-center gap-1 cursor-pointer group">
+              <span className={`text-[11px] font-medium uppercase tracking-wider transition-colors ${
+                isHeaderTransparent ? 'text-white/70 group-hover:text-white' : 'text-neutral-500 group-hover:text-neutral-900'
+              }`}>
+                {activeLocale === 'en' ? 'ENG' : 'FR'}
+              </span>
+              <svg className={`w-2.5 h-2.5 transition-colors ${
+                isHeaderTransparent ? 'text-white/40 group-hover:text-white/80' : 'text-neutral-400 group-hover:text-neutral-600'
+              }`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+              </svg>
+              <select
+                value={activeLocale}
+                onChange={(e) => changeLocale(e.target.value)}
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+              >
+                {locales.map(l => (
+                  <option key={l.code} value={l.code} className="text-neutral-900 bg-white font-semibold">
+                    {l.code === 'en' ? 'ENG' : 'FR'}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <button
               onClick={() => setIsAuthOpen(true)}
