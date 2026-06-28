@@ -9,7 +9,7 @@ import { CustomerAuthProvider } from './context/CustomerAuthContext';
 import AppRoutes from './routes/AppRoutes';
 import Preloader from './components/ui/Preloader';
 
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "dummy-id.apps.googleusercontent.com";
 
 function App() {
   return (
