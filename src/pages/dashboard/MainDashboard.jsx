@@ -5184,8 +5184,10 @@ export const MainDashboard = () => {
                             <td className="p-4 font-extrabold text-neutral-900">
                               {formatPrice(order.total)}
                             </td>
-                            <td className="p-4 text-neutral-600">
-                              {order.payment_method}
+                            <td className="p-4 text-neutral-600 font-semibold text-[10.5px]">
+                              {order.payment_method || (order.payments && order.payments.length > 0 ? (
+                                <span className="uppercase">{order.payments[0].operator || order.payments[0].payment_type}</span>
+                              ) : 'Non spécifié')}
                             </td>
                             <td className="p-4">
                               {getDeliveryStatusBadge(order.status)}
@@ -5327,16 +5329,52 @@ export const MainDashboard = () => {
                           </div>
 
                           {/* Payment info */}
-                          <div className="bg-neutral-50/50 p-3 border border-neutral-200/40 grid grid-cols-2 gap-4">
-                            <div>
-                              <h4 className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Détails de Paiement</h4>
-                              <p className="text-neutral-700 font-bold text-[10.5px]">Méthode: {selectedOrder.payment_method}</p>
-                              <p className="text-[#0ab39c] font-bold text-[10.5px]">Statut: Réussi</p>
+                          <div className="bg-neutral-50/50 p-3 border border-neutral-200/40 space-y-3 text-left">
+                            <div className="flex justify-between items-center border-b border-neutral-100 pb-1.5">
+                              <h4 className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Informations de Paiement</h4>
+                              <span className="text-neutral-600 font-bold text-[10.5px]">
+                                Méthode: {selectedOrder.payment_method || (selectedOrder.payments && selectedOrder.payments.length > 0 ? (selectedOrder.payments[0].payment_type === 'mobile_money' ? 'Mobile Money' : 'Carte Bancaire') : 'Non spécifiée')}
+                              </span>
                             </div>
-                            <div>
-                              <h4 className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Réf. Transaction</h4>
-                              <p className="text-neutral-500 font-mono text-[10px]">{selectedOrder.transaction_id || `TXN-${selectedOrder.id}`}</p>
-                            </div>
+
+                            {selectedOrder.payments && selectedOrder.payments.length > 0 ? (
+                              <div className="space-y-2">
+                                {selectedOrder.payments.map((p, pIdx) => (
+                                  <div key={p.gateway_reference || pIdx} className="flex justify-between items-center text-[10px] bg-white p-2 border border-neutral-200/50">
+                                    <div>
+                                      <span className="font-bold text-neutral-800 uppercase">{p.operator || p.payment_type || 'Paiement'}</span>
+                                      {p.phone_number && <span className="text-neutral-500 font-semibold ml-2">({p.phone_number})</span>}
+                                      <div className="text-neutral-400 text-[8px] mt-0.5 font-mono">{p.gateway_reference}</div>
+                                    </div>
+                                    <div className="text-right">
+                                      <span className="font-bold text-neutral-800 block">{p.amount ? `${p.amount.toLocaleString()} XOF` : ''}</span>
+                                      <span className={`inline-block px-1.5 py-0.5 text-[8px] font-extrabold tracking-wider border rounded-none uppercase ${
+                                        p.status === 'SUCCESS' ? 'bg-green-50 text-green-700 border-green-200' :
+                                        p.status === 'FAILED' ? 'bg-red-50 text-red-700 border-red-200' :
+                                        'bg-yellow-50 text-yellow-700 border-yellow-200'
+                                      }`}>
+                                        {p.status === 'SUCCESS' ? 'Réussi' : p.status === 'FAILED' ? 'Échoué' : 'En attente'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <p className="text-neutral-700 font-semibold text-[10.5px]">Méthode: {selectedOrder.payment_method || 'Non spécifiée'}</p>
+                                  <p className="text-neutral-500 text-[10.5px]">
+                                    Statut: <span className={`font-bold ${selectedOrder.status === 'confirmed' || selectedOrder.status === 'delivered' || selectedOrder.status === 'preparing' || selectedOrder.status === 'inprogress' || selectedOrder.status === 'shipped' ? 'text-[#0ab39c]' : 'text-yellow-600'}`}>
+                                      {selectedOrder.status === 'confirmed' || selectedOrder.status === 'delivered' || selectedOrder.status === 'preparing' || selectedOrder.status === 'inprogress' || selectedOrder.status === 'shipped' ? 'Réussi (via statut)' : 'En attente'}
+                                    </span>
+                                  </p>
+                                </div>
+                                <div>
+                                  <h4 className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Réf. Transaction</h4>
+                                  <p className="text-neutral-500 font-mono text-[10px]">{selectedOrder.transaction_id || 'Aucune transaction'}</p>
+                                </div>
+                              </div>
+                            )}
                           </div>
 
                           {/* Ordered items */}
