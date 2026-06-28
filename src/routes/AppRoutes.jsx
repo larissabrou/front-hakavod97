@@ -1200,7 +1200,7 @@ const StorefrontLayout = ({ children }) => {
             <img
               src="/logo.png"
               alt="HA-KAVOD 97 Logo"
-              className="h-16 w-auto object-contain self-start bg-transparent"
+              className="h-32 w-auto object-contain self-start bg-transparent"
             />
             <div>
               <p className="leading-relaxed text-neutral-400 text-[10.5px]">
