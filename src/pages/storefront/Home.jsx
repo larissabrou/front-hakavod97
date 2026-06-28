@@ -165,6 +165,62 @@ const DEFAULT_PROMO_SECTIONS = [
   }
 ];
 
+const DEFAULT_TOP_SLIDES = [
+  {
+    id: "top-default-1",
+    type: "image",
+    tag: "Maison de Souliers",
+    title_line1: "L'Art du",
+    title_line2_italic: "Soulier",
+    description: "Chaque paire est une déclaration. Des matières nobles, un savoir-faire artisanal, une esthétique sans compromis.",
+    image: HERO_IMG,
+    link_primary: "/catalog",
+    link_primary_label: "Découvrir",
+    link_secondary: "/catalog?category=nouveautes",
+    link_secondary_label: "Nouveautés",
+    active: true
+  }
+];
+
+const DEFAULT_SLIDES = [
+  {
+    id: "default-1",
+    tag: "Automne / Hiver",
+    title: "Chelsea Boot",
+    subtitle: "Cuir Suédé",
+    description: "L'élégance décontractée à son apogée. Cuir suédé tanné végétal, élastiques sur les côtés en cuir de veau, semelle Goodyear welt cousue main.",
+    price: 144000,
+    old_price: 175000,
+    image: "https://images.unsplash.com/photo-1608256246200-53e635b5b65f?w=1200&auto=format&fit=crop&q=85",
+    link: "/catalog",
+    active: true
+  },
+  {
+    id: "default-2",
+    tag: "Collection Signature",
+    title: "Derby Oxford",
+    subtitle: "Cuir Grainé",
+    description: "L'élégance à l'état pur. Confectionné en cuir grainé pleine fleur, ce Derby Oxford incarne la sobriété raffinée qui définit Ha-Kavod 97.",
+    price: 125000,
+    old_price: 150000,
+    image: "/home4.jpeg",
+    link: "/catalog",
+    active: true
+  },
+  {
+    id: "default-3",
+    tag: "Urban Luxe",
+    title: "Sneaker Cuir",
+    subtitle: "Blanc",
+    description: "La sneaker réinventée par Ha-Kavod 97. Silhouette minimaliste, cuir pleine fleur traité à la main, semelle Vibram ultra-confort.",
+    price: 98000,
+    old_price: null,
+    image: "/home3.jpeg",
+    link: "/catalog",
+    active: true
+  }
+];
+
 // ── Composant PromoSection ──────────────────────────────────────────────────
 const PromoSection = ({ section, index, formatPrice, heroProductLink, nextSectionRef, viewProductLabel }) => {
   const [txtRef, txtV] = useReveal(0.15);
@@ -334,22 +390,7 @@ export const Home = () => {
     touchEndY.current = 0;
   };
 
-  const DEFAULT_TOP_SLIDES = [
-    {
-      id: "top-default-1",
-      type: "image",
-      tag: "Maison de Souliers",
-      title_line1: "L'Art du",
-      title_line2_italic: "Soulier",
-      description: "Chaque paire est une déclaration. Des matières nobles, un savoir-faire artisanal, une esthétique sans compromis.",
-      image: HERO_IMG,
-      link_primary: "/catalog",
-      link_primary_label: "Découvrir",
-      link_secondary: "/catalog?category=nouveautes",
-      link_secondary_label: "Nouveautés",
-      active: true
-    }
-  ];
+
 
 
 
@@ -412,44 +453,7 @@ export const Home = () => {
     setCurrentTopSlide(prev => (prev - 1 + displayTopSlides.length) % displayTopSlides.length);
   };
 
-  const DEFAULT_SLIDES = [
-    {
-      id: "default-1",
-      tag: "Automne / Hiver",
-      title: "Chelsea Boot",
-      subtitle: "Cuir Suédé",
-      description: "L'élégance décontractée à son apogée. Cuir suédé tanné végétal, élastiques sur les côtés en cuir de veau, semelle Goodyear welt cousue main.",
-      price: 144000,
-      old_price: 175000,
-      image: "https://images.unsplash.com/photo-1608256246200-53e635b5b65f?w=1200&auto=format&fit=crop&q=85",
-      link: "/catalog",
-      active: true
-    },
-    {
-      id: "default-2",
-      tag: "Collection Signature",
-      title: "Derby Oxford",
-      subtitle: "Cuir Grainé",
-      description: "L'élégance à l'état pur. Confectionné en cuir grainé pleine fleur, ce Derby Oxford incarne la sobriété raffinée qui définit Ha-Kavod 97.",
-      price: 125000,
-      old_price: 150000,
-      image: "/home4.jpeg",
-      link: "/catalog",
-      active: true
-    },
-    {
-      id: "default-3",
-      tag: "Urban Luxe",
-      title: "Sneaker Cuir",
-      subtitle: "Blanc",
-      description: "La sneaker réinventée par Ha-Kavod 97. Silhouette minimaliste, cuir pleine fleur traité à la main, semelle Vibram ultra-confort.",
-      price: 98000,
-      old_price: null,
-      image: "/home3.jpeg",
-      link: "/catalog",
-      active: true
-    }
-  ];
+
 
 
 
