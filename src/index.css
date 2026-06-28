@@ -247,3 +247,13 @@ body {
   transform: scaleX(1);
   transform-origin: left;
 }
+
+/* Hide native up/down number spinners globally */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type=number] {
+  -moz-appearance: textfield;
+}
