@@ -947,12 +947,12 @@ const StorefrontLayout = ({ children }) => {
                                       const formattedDial = c.phone_code ? (c.phone_code.startsWith('+') ? c.phone_code : '+' + c.phone_code) : '';
                                       return (
                                         <option key={c.code} value={c.code}>
-                                          {c.flag} {c.code} ({formattedDial})
+                                          {c.code} ({formattedDial})
                                         </option>
                                       );
                                     })
                                   ) : (
-                                    <option value="CI">🇨🇮 CI (+225)</option>
+                                    <option value="CI">CI (+225)</option>
                                   )}
                                 </select>
                                 <input
@@ -1081,12 +1081,12 @@ const StorefrontLayout = ({ children }) => {
                                           const formattedDial = c.phone_code ? (c.phone_code.startsWith('+') ? c.phone_code : '+' + c.phone_code) : '';
                                           return (
                                             <option key={c.code} value={c.code}>
-                                              {c.flag} {c.code} ({formattedDial})
+                                              {c.code} ({formattedDial})
                                             </option>
                                           );
                                         })
                                       ) : (
-                                        <option value="CI">🇨🇮 CI (+225)</option>
+                                        <option value="CI">CI (+225)</option>
                                       )}
                                     </select>
                                     <input
