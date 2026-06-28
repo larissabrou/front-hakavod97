@@ -420,7 +420,7 @@ const StorefrontLayout = ({ children }) => {
             <select
               value={activeCurrency}
               onChange={(e) => changeCurrency(e.target.value)}
-              className={`text-xs bg-transparent border-0 font-bold uppercase cursor-pointer focus:outline-none focus:ring-0 ${
+              className={`text-xs bg-transparent border-0 font-bold uppercase cursor-pointer focus:outline-none focus:ring-0 header-select ${
                 isHeaderTransparent ? 'text-white/70 hover:text-white' : 'text-neutral-500 hover:text-neutral-900'
               }`}
             >
@@ -435,7 +435,7 @@ const StorefrontLayout = ({ children }) => {
             <select
               value={activeLocale}
               onChange={(e) => changeLocale(e.target.value)}
-              className={`text-xs bg-transparent border-0 font-bold uppercase cursor-pointer focus:outline-none focus:ring-0 ${
+              className={`text-xs bg-transparent border-0 font-bold uppercase cursor-pointer focus:outline-none focus:ring-0 header-select ${
                 isHeaderTransparent ? 'text-white/70 hover:text-white' : 'text-neutral-500 hover:text-neutral-900'
               }`}
             >
