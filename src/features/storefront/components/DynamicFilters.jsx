@@ -21,21 +21,23 @@ export const DynamicFilters = ({
   }).filter(Boolean);
 
   return (
-    <div className="flex flex-col gap-6 w-full text-left">
+    <div className="flex flex-col gap-7 w-full text-left">
       <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-        <h3 className="text-base font-bold text-neutral-900">{t('filters')}</h3>
+        <h3 className="text-sm font-black uppercase tracking-wider text-neutral-900">{t('filters')}</h3>
         <button
           onClick={onReset}
-          className="text-xs text-neutral-400 hover:text-accent flex items-center gap-1 transition-colors"
+          className="text-[10px] font-bold text-neutral-400 hover:text-neutral-900 flex items-center gap-1 transition-colors uppercase tracking-wider cursor-pointer"
         >
-          <X className="w-3 h-3" />
+          <X className="w-3 h-3 stroke-[2.5]" />
           {t('reset')}
         </button>
       </div>
 
       {/* Filtre des Tailles */}
       <div>
-        <h4 className="text-sm font-semibold text-neutral-800 mb-3">{t('size')}</h4>
+        <h4 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-3 pb-1 border-b border-neutral-50">
+          {t('size')}
+        </h4>
         <div className="grid grid-cols-4 gap-2">
           {availableSizes.length === 0 ? (
             <div className="col-span-4 text-xs text-neutral-500">{t('no_sizes')}</div>
@@ -46,10 +48,10 @@ export const DynamicFilters = ({
                 <button
                   key={size}
                   onClick={() => onFilterChange('sizes', size)}
-                  className={`py-2 text-xs font-medium border text-center transition-colors rounded-sm ${
+                  className={`py-2.5 text-xs font-bold border text-center transition-all rounded-none uppercase select-none cursor-pointer ${
                     isSelected
-                      ? 'border-primary bg-primary text-white'
-                      : 'border-neutral-200 text-neutral-600 hover:border-neutral-400'
+                      ? 'border-neutral-900 bg-neutral-900 text-white shadow-xs'
+                      : 'border-neutral-200 text-neutral-800 bg-white hover:border-neutral-800 hover:bg-neutral-50'
                   }`}
                 >
                   {size}
@@ -62,7 +64,9 @@ export const DynamicFilters = ({
 
       {/* Filtre des Couleurs */}
       <div>
-        <h4 className="text-sm font-semibold text-neutral-800 mb-3">{t('color')}</h4>
+        <h4 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-3 pb-1 border-b border-neutral-50">
+          {t('color')}
+        </h4>
         <div className="flex flex-wrap gap-2.5">
           {normalizedColors.length === 0 ? (
             <div className="text-xs text-neutral-500">{t('no_colors')}</div>
@@ -73,14 +77,24 @@ export const DynamicFilters = ({
                 <button
                   key={color.name}
                   onClick={() => onFilterChange('colors', color.name)}
-                  className={`w-7 h-7 rounded-full border border-neutral-200 relative flex items-center justify-center transition-all ${
-                    isSelected ? 'ring-2 ring-accent ring-offset-2 scale-105' : 'hover:scale-105'
+                  className={`w-8 h-8 border relative flex items-center justify-center transition-all cursor-pointer select-none rounded-none ${
+                    isSelected
+                      ? 'border-neutral-900 ring-2 ring-neutral-900 ring-offset-2 scale-105 z-10'
+                      : 'border-neutral-200 hover:border-neutral-400 hover:scale-105'
                   }`}
                   style={{ backgroundColor: color.code }}
                   title={translateColor(color.name, activeLocale)}
                 >
-                  {(color.name === 'Blanc' || color.name === 'white' || color.name === 'White') && (
-                    <span className="w-1 h-1 bg-neutral-400 rounded-full" />
+                  {isSelected && (
+                    <span className="absolute inset-0 flex items-center justify-center">
+                      <svg className="w-3.5 h-3.5 text-white mix-blend-difference stroke-[3.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3.5} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </span>
+                  )}
+                  {/* Subtle marker for white/very light background when not selected */}
+                  {!isSelected && (color.name === 'Blanc' || color.name === 'white' || color.name === 'White' || color.code.toLowerCase() === '#ffffff') && (
+                    <span className="absolute inset-0 border border-neutral-100 rounded-none pointer-events-none" />
                   )}
                 </button>
               );
@@ -91,7 +105,9 @@ export const DynamicFilters = ({
 
       {/* Filtre des Prix (Tranches) */}
       <div>
-        <h4 className="text-sm font-semibold text-neutral-800 mb-3">{t('price_range')}</h4>
+        <h4 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-3 pb-1 border-b border-neutral-50">
+          {t('price_range')}
+        </h4>
         <div className="flex flex-col gap-2">
           {availablePriceRanges.length === 0 ? (
             <div className="text-xs text-neutral-500">{t('no_prices')}</div>
@@ -101,16 +117,15 @@ export const DynamicFilters = ({
               return (
                 <label
                   key={priceRange.value}
-                  className="flex items-center gap-2 text-sm text-neutral-600 cursor-pointer"
+                  className="flex items-center gap-3 text-xs font-semibold text-neutral-700 hover:text-neutral-950 cursor-pointer group select-none py-1"
+                  onClick={() => onFilterChange('priceRange', priceRange.value, true)}
                 >
-                  <input
-                    type="radio"
-                    name="priceRange"
-                    checked={isSelected}
-                    onChange={() => onFilterChange('priceRange', priceRange.value, true)}
-                    className="rounded-full border-neutral-300 text-accent focus:ring-accent"
-                  />
-                  {priceRange.label}
+                  <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 transition-all ${
+                    isSelected ? 'border-neutral-900 bg-neutral-900 shadow-sm' : 'border-neutral-300 group-hover:border-neutral-400 bg-white'
+                  }`}>
+                    {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                  </span>
+                  <span>{priceRange.label}</span>
                 </label>
               );
             })
