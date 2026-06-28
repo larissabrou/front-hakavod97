@@ -439,11 +439,10 @@ const StorefrontLayout = ({ children }) => {
           <div className="flex items-center gap-6">
             {/* Sélecteur de Devise */}
             <div className="relative flex items-center gap-1 cursor-pointer group">
-              <span className={`text-[11px] font-medium uppercase tracking-wider transition-colors flex items-center gap-1 ${
+              <span className={`text-[11px] font-medium uppercase tracking-wider transition-colors ${
                 isHeaderTransparent ? 'text-white/70 group-hover:text-white' : 'text-neutral-500 group-hover:text-neutral-900'
               }`}>
-                <span>{activeCurrency === 'XOF' ? '🇨🇮' : activeCurrency === 'EUR' ? '🇪🇺' : '🇺🇸'}</span>
-                <span>{activeCurrency}</span>
+                {activeCurrency}
               </span>
               <svg className={`w-2.5 h-2.5 transition-colors ${
                 isHeaderTransparent ? 'text-white/40 group-hover:text-white/80' : 'text-neutral-400 group-hover:text-neutral-600'
@@ -457,7 +456,7 @@ const StorefrontLayout = ({ children }) => {
               >
                 {currencies.map(c => (
                   <option key={c.code} value={c.code} className="text-neutral-900 bg-white font-semibold">
-                    {c.code === 'XOF' ? '🇨🇮' : c.code === 'EUR' ? '🇪🇺' : '🇺🇸'} {c.code}
+                    {c.code}
                   </option>
                 ))}
               </select>
@@ -465,11 +464,10 @@ const StorefrontLayout = ({ children }) => {
 
             {/* Sélecteur de Langue */}
             <div className="relative flex items-center gap-1 cursor-pointer group">
-              <span className={`text-[11px] font-medium uppercase tracking-wider transition-colors flex items-center gap-1 ${
+              <span className={`text-[11px] font-medium uppercase tracking-wider transition-colors ${
                 isHeaderTransparent ? 'text-white/70 group-hover:text-white' : 'text-neutral-500 group-hover:text-neutral-900'
               }`}>
-                <span>{activeLocale === 'en' ? '🇬🇧' : '🇫🇷'}</span>
-                <span>{activeLocale === 'en' ? 'ENG' : 'FR'}</span>
+                {activeLocale === 'en' ? 'ENG' : 'FR'}
               </span>
               <svg className={`w-2.5 h-2.5 transition-colors ${
                 isHeaderTransparent ? 'text-white/40 group-hover:text-white/80' : 'text-neutral-400 group-hover:text-neutral-600'
@@ -483,7 +481,7 @@ const StorefrontLayout = ({ children }) => {
               >
                 {locales.map(l => (
                   <option key={l.code} value={l.code} className="text-neutral-900 bg-white font-semibold">
-                    {l.code === 'en' ? '🇬🇧' : '🇫🇷'} {l.code === 'en' ? 'ENG' : 'FR'}
+                    {l.code === 'en' ? 'ENG' : 'FR'}
                   </option>
                 ))}
               </select>
