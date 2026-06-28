@@ -511,6 +511,7 @@ export const MainDashboard = () => {
       noNewNotifications: 'Aucune nouvelle notification',
       darkModeLabel: 'Thème Sombre',
       lightModeLabel: 'Thème Clair',
+      stockAlertsDesc: 'Gérez les demandes de retour en stock des clients.',
       
       // Submenus translations FR
       subAllOrders: 'Toutes les commandes',
@@ -563,6 +564,7 @@ export const MainDashboard = () => {
       noNewNotifications: 'No new notifications',
       darkModeLabel: 'Dark Mode',
       lightModeLabel: 'Light Mode',
+      stockAlertsDesc: 'Manage customer requests for back-in-stock alerts.',
 
       // Submenus translations EN
       subAllOrders: 'All Orders',
@@ -682,6 +684,11 @@ export const MainDashboard = () => {
   const [customerSearch, setCustomerSearch] = useState('');
   const [customerFilterDate, setCustomerFilterDate] = useState('');
   const [customerFilterStatus, setCustomerFilterStatus] = useState('');
+  
+  // Stock return notifications states
+  const [stockNotifications, setStockNotifications] = useState([]);
+  const [stockAlertsSearch, setStockAlertsSearch] = useState('');
+  const [stockAlertsFilterStatus, setStockAlertsFilterStatus] = useState('');
   const [customerFilterType, setCustomerFilterType] = useState('');
   const [customerFilterSource, setCustomerFilterSource] = useState('');
   const [customerSortBy, setCustomerSortBy] = useState('');
@@ -1112,6 +1119,8 @@ export const MainDashboard = () => {
         await loadCategoriesData();
       } else if (activeTab === 'attributes') {
         await loadAttributesData();
+      } else if (activeTab === 'stock-alerts') {
+        await loadStockAlertsData();
       } else if (activeTab === 'settings' || activeTab === 'shipping' || activeTab === 'users') {
         await loadSettingsData();
       }
@@ -1688,6 +1697,120 @@ export const MainDashboard = () => {
     setCustomerSortBy('');
     setCustomerSortOrder('asc');
     setCustomerCurrentPage(1);
+  };
+
+  const loadStockAlertsData = async () => {
+    // Make sure products are loaded because we need them to check variant stocks
+    if (products.length === 0) {
+      await loadProductsData();
+    }
+    const stored = localStorage.getItem('stock_notifications');
+    if (stored) {
+      setStockNotifications(JSON.parse(stored));
+    } else {
+      const defaultAlerts = [
+        {
+          id: 'alert-1',
+          product_id: 1,
+          product_name: 'Derby Oxford Cuir Grainé',
+          color: 'Noir',
+          size: '42',
+          contact: 'alexis.clarke@example.com',
+          date: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
+          status: 'pending'
+        },
+        {
+          id: 'alert-2',
+          product_id: 2,
+          product_name: 'Sac à Main Cabas Autruche',
+          color: 'Noir',
+          size: 'Unique',
+          contact: '+225 07 08 09 10 11',
+          date: new Date(Date.now() - 12 * 3600 * 1000).toISOString(),
+          status: 'pending'
+        },
+        {
+          id: 'alert-3',
+          product_id: 3,
+          product_name: 'Sneaker Blanc Court',
+          color: 'Or',
+          size: '39',
+          contact: 'diana.kohler@example.com',
+          date: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
+          status: 'notified'
+        },
+        {
+          id: 'alert-4',
+          product_id: 4,
+          product_name: 'Robe du Soir en Soie Noire',
+          color: 'Noir',
+          size: '40',
+          contact: '+225 05 06 07 08 09',
+          date: new Date(Date.now() - 4 * 3600 * 1000).toISOString(),
+          status: 'pending'
+        }
+      ];
+      localStorage.setItem('stock_notifications', JSON.stringify(defaultAlerts));
+      setStockNotifications(defaultAlerts);
+    }
+  };
+
+  const handleDeleteStockAlert = (alertId) => {
+    showConfirm("Voulez-vous vraiment supprimer cette demande d'alerte ?", () => {
+      try {
+        const stored = localStorage.getItem('stock_notifications');
+        if (stored) {
+          const list = JSON.parse(stored);
+          const updated = list.filter(item => item.id !== alertId);
+          localStorage.setItem('stock_notifications', JSON.stringify(updated));
+          setStockNotifications(updated);
+          setSuccess("Alerte de stock supprimée avec succès !");
+        }
+      } catch (err) {
+        setError("Impossible de supprimer l'alerte.");
+      }
+    });
+  };
+
+  const handleNotifyStockAlert = (alert) => {
+    // Check stock level first
+    const stock = getVariantStock(alert.product_id, alert.color, alert.size);
+    if (stock <= 0) {
+      showAlert("Attention", "Le stock de cette variante est toujours épuisé (0). Vous devez d'abord réapprovisionner le stock de ce produit avant de pouvoir notifier le client.");
+      return;
+    }
+
+    try {
+      const stored = localStorage.getItem('stock_notifications');
+      if (stored) {
+        const list = JSON.parse(stored);
+        const updated = list.map(item => {
+          if (item.id === alert.id) {
+            return { ...item, status: 'notified' };
+          }
+          return item;
+        });
+        localStorage.setItem('stock_notifications', JSON.stringify(updated));
+        setStockNotifications(updated);
+        
+        const isEmail = alert.contact.includes('@');
+        const channel = isEmail ? "E-mail" : "SMS";
+        setSuccess(`Notification envoyée avec succès par ${channel} à ${alert.contact} !`);
+      }
+    } catch (err) {
+      setError("Erreur lors de la notification.");
+    }
+  };
+
+  const getVariantStock = (productId, colorName, sizeName) => {
+    const prod = products.find(p => p.id === productId);
+    if (!prod) return 0;
+    const variant = prod.variants?.find(v => {
+      const vColor = v.color?.name || v.color;
+      const vSize = v.size?.name || v.size;
+      return vColor === colorName && vSize === sizeName;
+    });
+    return variant ? Number(variant.stock) : 0;
   };
 
   const loadCustomersData = async () => {
@@ -4650,6 +4773,7 @@ export const MainDashboard = () => {
                   {activeTab === 'settings' && t.settings}
                   {activeTab === 'notification-templates' && 'Notification Templates'}
                   {activeTab === 'notification-campaigns' && 'Notification Campaigns'}
+                  {activeTab === 'stock-alerts' && t.subStockAlerts}
                 </h1>
                 <p className="text-xs text-neutral-400 font-medium mt-1">
                   {activeTab === 'dashboard' && t.dashboardDesc}
@@ -4664,6 +4788,7 @@ export const MainDashboard = () => {
                   {activeTab === 'settings' && t.settingsDesc}
                   {activeTab === 'notification-templates' && 'Gérez les modèles de notification.'}
                   {activeTab === 'notification-campaigns' && 'Gérez les campagnes de notification et prévisualisez leur audience.'}
+                  {activeTab === 'stock-alerts' && t.stockAlertsDesc}
                 </p>
               </div>
             </header>
@@ -8526,6 +8651,224 @@ export const MainDashboard = () => {
                 setSuccess={setSuccess}
                 setError={setError}
               />
+            </div>
+          )}
+
+          {activeTab === 'stock-alerts' && (
+            <div className="space-y-6 animate-fade-in text-xs">
+              {/* Summary Cards */}
+              {(() => {
+                const totalAlerts = stockNotifications.length;
+                const pendingAlerts = stockNotifications.filter(a => a.status === 'pending').length;
+                const notifiedAlerts = stockNotifications.filter(a => a.status === 'notified').length;
+                const readyAlerts = stockNotifications.filter(a => a.status === 'pending' && getVariantStock(a.product_id, a.color, a.size) > 0).length;
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                    <div className="bg-white p-5 border border-neutral-200 shadow-2xs flex items-center gap-4">
+                      <div className="p-3 bg-neutral-100 text-neutral-850">
+                        <Bell className="w-4.5 h-4.5" />
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold text-neutral-450 uppercase tracking-widest block">Demandes Totales</span>
+                        <span className="text-base font-black text-neutral-900 mt-0.5 block">{totalAlerts}</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-white p-5 border border-neutral-200 shadow-2xs flex items-center gap-4">
+                      <div className="p-3 bg-orange-50 text-orange-600">
+                        <Bell className="w-4.5 h-4.5" />
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold text-neutral-450 uppercase tracking-widest block">En Attente</span>
+                        <span className="text-base font-black text-neutral-900 mt-0.5 block">{pendingAlerts}</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-white p-5 border border-neutral-200 shadow-2xs flex items-center gap-4">
+                      <div className="p-3 bg-emerald-50 text-emerald-600">
+                        <CheckCircle className="w-4.5 h-4.5" />
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold text-neutral-455 uppercase tracking-widest block">Prêts à notifier</span>
+                        <span className="text-base font-black text-neutral-900 mt-0.5 block">{readyAlerts}</span>
+                      </div>
+                    </div>
+
+                    <div className="bg-white p-5 border border-neutral-200 shadow-2xs flex items-center gap-4">
+                      <div className="p-3 bg-neutral-950 text-white">
+                        <CheckCircle className="w-4.5 h-4.5" />
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold text-neutral-450 uppercase tracking-widest block">Clients Notifiés</span>
+                        <span className="text-base font-black text-neutral-900 mt-0.5 block">{notifiedAlerts}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Filters & Actions Bar */}
+              <div className="bg-white p-4 border border-neutral-200 shadow-2xs flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div className="relative w-full md:w-80">
+                  <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-neutral-400">
+                    <Search className="w-3.5 h-3.5" />
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="Rechercher par produit ou contact..."
+                    value={stockAlertsSearch}
+                    onChange={(e) => setStockAlertsSearch(e.target.value)}
+                    className="w-full pl-9 pr-3 py-1.5 border border-neutral-200 text-[11px] focus:outline-none focus:border-neutral-850 bg-white rounded-none text-neutral-700 font-medium"
+                  />
+                </div>
+
+                <div className="flex gap-3 w-full md:w-auto justify-end">
+                  <select
+                    value={stockAlertsFilterStatus}
+                    onChange={(e) => setStockAlertsFilterStatus(e.target.value)}
+                    className="border border-neutral-200 px-3 py-1.5 text-[11px] focus:outline-none focus:border-neutral-850 bg-white rounded-none text-neutral-700 font-semibold min-w-[150px]"
+                  >
+                    <option value="">Tous les statuts</option>
+                    <option value="pending">En attente</option>
+                    <option value="ready">Prêt à notifier (en stock)</option>
+                    <option value="notified">Notifié</option>
+                  </select>
+
+                  <button
+                    onClick={() => {
+                      setStockAlertsSearch('');
+                      setStockAlertsFilterStatus('');
+                    }}
+                    className="bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 text-neutral-700 font-bold py-1.5 px-3 uppercase tracking-wider flex items-center gap-1.5 transition-colors cursor-pointer text-[10px]"
+                  >
+                    <RefreshCcw className="w-3.5 h-3.5" />
+                    Réinitialiser
+                  </button>
+                </div>
+              </div>
+
+              {/* Main List Table */}
+              <div className="bg-white border border-neutral-200 shadow-2xs overflow-hidden">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-neutral-200 bg-neutral-50 text-[10px] font-black uppercase tracking-wider text-neutral-500">
+                      <th className="p-4">Date de demande</th>
+                      <th className="p-4">Produit</th>
+                      <th className="p-4">Variante (Couleur / Taille)</th>
+                      <th className="p-4">Contact</th>
+                      <th className="p-4 text-center">Stock Actuel</th>
+                      <th className="p-4">Statut</th>
+                      <th className="p-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-100 font-medium text-neutral-700">
+                    {(() => {
+                      const list = stockNotifications.filter(alert => {
+                        const matchesSearch = 
+                          alert.product_name.toLowerCase().includes(stockAlertsSearch.toLowerCase()) ||
+                          alert.contact.toLowerCase().includes(stockAlertsSearch.toLowerCase());
+                        
+                        const matchesStatus = 
+                          !stockAlertsFilterStatus || 
+                          (stockAlertsFilterStatus === 'ready' 
+                            ? (alert.status === 'pending' && getVariantStock(alert.product_id, alert.color, alert.size) > 0)
+                            : alert.status === stockAlertsFilterStatus);
+                          
+                        return matchesSearch && matchesStatus;
+                      });
+
+                      if (list.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan="7" className="p-8 text-center text-neutral-450 uppercase tracking-widest text-[10px] font-bold">
+                              Aucune demande d'alerte trouvée
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return list.map((alert) => {
+                        const stock = getVariantStock(alert.product_id, alert.color, alert.size);
+                        const isReady = alert.status === 'pending' && stock > 0;
+
+                        return (
+                          <tr key={alert.id} className="hover:bg-neutral-50/50 transition-colors">
+                            <td className="p-4 text-neutral-500">
+                              {formatOrderDate(alert.date)}
+                            </td>
+                            <td className="p-4 font-bold text-neutral-900">
+                              {alert.product_name}
+                            </td>
+                            <td className="p-4">
+                              <span className="px-2 py-0.5 border border-neutral-200 bg-neutral-50 text-[10px] text-neutral-600 rounded-xs mr-2 font-semibold">
+                                {alert.color}
+                              </span>
+                              <span className="px-2 py-0.5 border border-neutral-200 bg-neutral-50 text-[10px] text-neutral-600 rounded-xs font-semibold">
+                                T. {alert.size}
+                              </span>
+                            </td>
+                            <td className="p-4 font-semibold text-neutral-800">
+                              {alert.contact}
+                            </td>
+                            <td className="p-4 text-center">
+                              {stock > 0 ? (
+                                <span className="bg-emerald-50 text-emerald-700 border border-emerald-250 px-2 py-0.5 text-[9px] font-extrabold tracking-wider uppercase">
+                                  En stock ({stock})
+                                </span>
+                              ) : (
+                                <span className="bg-red-50/70 text-red-650 border border-red-200 px-2 py-0.5 text-[9px] font-extrabold tracking-wider uppercase">
+                                  Rupture (0)
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-4">
+                              {alert.status === 'notified' ? (
+                                <span className="bg-neutral-950 text-white px-2.5 py-0.5 text-[9px] font-bold tracking-wider uppercase">
+                                  Notifié
+                                </span>
+                              ) : isReady ? (
+                                <span className="bg-amber-50 text-amber-700 border border-amber-300 px-2.5 py-0.5 text-[9px] font-bold tracking-wider uppercase animate-pulse">
+                                  Prêt à notifier
+                                </span>
+                              ) : (
+                                <span className="bg-neutral-50 text-neutral-500 border border-neutral-200 px-2.5 py-0.5 text-[9px] font-bold tracking-wider uppercase">
+                                  En attente
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-4 text-right">
+                              <div className="flex gap-2 justify-end">
+                                {alert.status === 'pending' && (
+                                  <button
+                                    onClick={() => handleNotifyStockAlert(alert)}
+                                    disabled={stock <= 0}
+                                    title={stock <= 0 ? "Réapprovisionner le stock pour pouvoir notifier" : "Envoyer la notification par E-mail/SMS"}
+                                    className={`px-3 py-1 text-[9.5px] font-black uppercase tracking-wider cursor-pointer border rounded-none transition-colors ${
+                                      stock > 0 
+                                        ? 'bg-accent border-accent text-white hover:bg-accent-dark'
+                                        : 'bg-neutral-100 border-neutral-200 text-neutral-400 cursor-not-allowed'
+                                    }`}
+                                  >
+                                    Notifier
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => handleDeleteStockAlert(alert.id)}
+                                  className="p-1.5 text-neutral-400 hover:text-red-600 transition-colors cursor-pointer"
+                                  title="Supprimer la demande"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 

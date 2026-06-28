@@ -132,11 +132,44 @@ export const ProductDetail = () => {
     if (!notifyContact) return;
 
     const requestKey = `notify_stock_${product.id}_${selectedColor}_${selectedSize}`;
-    localStorage.setItem(requestKey, JSON.stringify({
+    const date = new Date().toISOString();
+    const payload = {
       contact: notifyContact,
-      date: new Date().toISOString(),
+      date,
       variantId: selectedVariant?.id
-    }));
+    };
+    localStorage.setItem(requestKey, JSON.stringify(payload));
+
+    // Also append to global stock_notifications list for Admin Dashboard management
+    try {
+      const storedList = localStorage.getItem('stock_notifications');
+      let list = [];
+      if (storedList) {
+        list = JSON.parse(storedList);
+      }
+      // Check if we already have this identical request to avoid duplicates
+      const isDuplicate = list.some(
+        item => item.product_id === product.id &&
+                item.color === selectedColor &&
+                item.size === selectedSize &&
+                item.contact.trim().toLowerCase() === notifyContact.trim().toLowerCase()
+      );
+      if (!isDuplicate) {
+        list.push({
+          id: Date.now() + Math.random().toString(36).substr(2, 5),
+          product_id: product.id,
+          product_name: product.name || product.title || 'Produit',
+          color: selectedColor,
+          size: selectedSize,
+          contact: notifyContact,
+          date,
+          status: 'pending' // pending, notified
+        });
+        localStorage.setItem('stock_notifications', JSON.stringify(list));
+      }
+    } catch (err) {
+      console.error("Failed to save global stock notification:", err);
+    }
 
     setIsNotifySubmitted(true);
     showToast(c.notify_alert_success, "success");
