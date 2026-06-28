@@ -1,0 +1,249 @@
+/* ── Google Fonts – doit être en premier ── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  /* ── Brand Colors (L'Armoirie Royale) ── */
+  --color-primary:       #540c14;
+  --color-primary-dark:  #330409;
+  --color-primary-light: #731822;
+  --color-accent:        #c5a059;
+  --color-accent-dark:   #967440;
+  --color-accent-light:  #e2cf9d;
+  --color-danger:        #e5002b;
+
+  /* ── Ivory & Cream Neutrals ── */
+  --color-neutral-50:  #faf8f5;
+  --color-neutral-100: #faf4eb;
+  --color-neutral-200: #f3efe6;
+  --color-neutral-300: #e7e0d2;
+  --color-neutral-400: #b8ad9a;
+  --color-neutral-500: #8e8372;
+  --color-neutral-600: #6d6253;
+  --color-neutral-700: #4e4438;
+  --color-neutral-800: #2d251d;
+  --color-neutral-900: #231215;
+  --color-neutral-950: #17070a;
+
+  /* ── Typography ── */
+  --font-sans:  'Inter', 'system-ui', 'sans-serif';
+  --font-serif: 'Playfair Display', 'Georgia', 'serif';
+
+  /* ── Border Radius Reset ── */
+  --radius:     0px;
+  --radius-xs:  0px;
+  --radius-sm:  0px;
+  --radius-md:  0px;
+  --radius-lg:  0px;
+  --radius-xl:  0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
+  --radius-full: 0px;
+}
+
+/* ── Base resets ── */
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-sans);
+  color: var(--color-neutral-900);
+  background-color: var(--color-neutral-50);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--color-neutral-100); }
+::-webkit-scrollbar-thumb { background: var(--color-neutral-300); border-radius: 0px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-neutral-400); }
+
+/* ── Selection ── */
+::selection { background-color: var(--color-accent); color: #ffffff; }
+
+/* ══════════════════════════════════════════════════════
+   ANIMATIONS — HA-KAVOD 97 STOREFRONT
+══════════════════════════════════════════════════════ */
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(40px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slide-left {
+  from { opacity: 0; transform: translateX(-60px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes slide-right {
+  from { opacity: 0; transform: translateX(60px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(100%); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.88); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-10px); }
+}
+@keyframes ken-burns {
+  from { transform: scale(1); }
+  to   { transform: scale(1.09); }
+}
+@keyframes reveal-line {
+  from { transform: scaleX(0); transform-origin: left; }
+  to   { transform: scaleX(1); transform-origin: left; }
+}
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
+}
+@keyframes draw-border {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0% 0 0); }
+}
+
+/* ══ Classes utilitaires ══ */
+.animate-fade-up     { animation: fade-up    0.75s cubic-bezier(0.22,1,0.36,1) both; }
+.animate-fade-in     { animation: fade-in    0.6s  ease both; }
+.animate-slide-left  { animation: slide-left 0.75s cubic-bezier(0.22,1,0.36,1) both; }
+.animate-slide-right { animation: slide-right 0.75s cubic-bezier(0.22,1,0.36,1) both; }
+.animate-slide-in-right { animation: slide-in-right 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-scale-in    { animation: scale-in   0.65s cubic-bezier(0.22,1,0.36,1) both; }
+.animate-float       { animation: float      4s    ease-in-out infinite; }
+.animate-ken-burns   { animation: ken-burns  14s   ease-in-out alternate infinite; }
+.animate-marquee     { animation: marquee    30s   linear infinite; }
+.animate-pulse-soft  { animation: pulse-soft 2.5s  ease-in-out infinite; }
+
+/* Délais */
+.delay-100 { animation-delay: 0.10s; }
+.delay-200 { animation-delay: 0.20s; }
+.delay-300 { animation-delay: 0.30s; }
+.delay-400 { animation-delay: 0.40s; }
+.delay-500 { animation-delay: 0.50s; }
+.delay-600 { animation-delay: 0.60s; }
+.delay-700 { animation-delay: 0.70s; }
+.delay-800 { animation-delay: 0.80s; }
+
+/* ── Révélation au scroll (IntersectionObserver) ── */
+.reveal-hidden {
+  opacity: 0;
+  transform: translateY(36px);
+  transition: opacity 0.8s cubic-bezier(0.22,1,0.36,1),
+              transform 0.8s cubic-bezier(0.22,1,0.36,1);
+}
+.reveal-hidden.revealed { opacity: 1; transform: translateY(0); }
+
+.reveal-left {
+  opacity: 0;
+  transform: translateX(-52px);
+  transition: opacity 0.85s cubic-bezier(0.22,1,0.36,1),
+              transform 0.85s cubic-bezier(0.22,1,0.36,1);
+}
+.reveal-left.revealed { opacity: 1; transform: translateX(0); }
+
+.reveal-right {
+  opacity: 0;
+  transform: translateX(52px);
+  transition: opacity 0.85s cubic-bezier(0.22,1,0.36,1),
+              transform 0.85s cubic-bezier(0.22,1,0.36,1);
+}
+.reveal-right.revealed { opacity: 1; transform: translateX(0); }
+
+.reveal-scale {
+  opacity: 0;
+  transform: scale(0.92);
+  transition: opacity 0.7s cubic-bezier(0.22,1,0.36,1),
+              transform 0.7s cubic-bezier(0.22,1,0.36,1);
+}
+.reveal-scale.revealed { opacity: 1; transform: scale(1); }
+
+/* ── Barre décorative animée ── */
+.reveal-bar {
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.85s cubic-bezier(0.22,1,0.36,1);
+}
+.reveal-bar.revealed { transform: scaleX(1); }
+
+/* ── Badge shimmer doré ── */
+.shimmer-gold {
+  background: linear-gradient(
+    90deg,
+    var(--color-accent-dark)  0%,
+    var(--color-accent-light) 40%,
+    var(--color-accent)       60%,
+    var(--color-accent-dark)  100%
+  );
+  background-size: 220% auto;
+  animation: shimmer 3.5s linear infinite;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ── Image hover — pas de zoom — ── */
+.img-zoom { overflow: hidden; }
+.img-zoom img {
+  transition: transform 1s cubic-bezier(0.22,1,0.36,1);
+  transform: scale(1);
+  object-fit: contain;
+  object-position: center;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ── Card lift au hover ── */
+.card-lift {
+  transition: transform 0.35s cubic-bezier(0.22,1,0.36,1),
+              box-shadow 0.35s ease;
+}
+.card-lift:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 24px 64px rgba(0,0,0,0.13);
+}
+
+/* ── Marquee bande texte défilant ── */
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee 32s linear infinite;
+  will-change: transform;
+}
+.marquee-track:hover { animation-play-state: paused; }
+
+/* ── Ligne de curseur décorative sur liens nav ── */
+.nav-underline {
+  position: relative;
+}
+.nav-underline::after {
+  content: '';
+  position: absolute;
+  left: 0; bottom: -2px;
+  width: 100%; height: 1px;
+  background: var(--color-accent);
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.35s cubic-bezier(0.22,1,0.36,1);
+}
+.nav-underline:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}

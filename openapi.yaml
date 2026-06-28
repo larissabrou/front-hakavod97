@@ -1,0 +1,1644 @@
+openapi: 3.0.3
+info:
+  title: HAKAVOD97 E-commerce API
+  description: |
+    API REST pour la boutique mode/luxe **HAKAVOD97** (catalogue, commandes, livraison, back-office).
+
+    ---
+
+    ## À qui sert cette API ?
+
+    | Client | Préfixe | Authentification |
+    |--------|---------|------------------|
+    | **Site vitrine / boutique** (front public) | `/store/*`, `/regions`, `/communes` | Aucune — routes publiques |
+    | **Dashboard admin** (gestion interne) | `/admin/*` | Bearer token Sanctum (voir ci-dessous) |
+
+    Toutes les routes sont préfixées par `/api` (ex. `GET /api/store/products`).
+
+    ---
+
+    ## Démarrage rapide — intégrer la boutique
+
+    1. **Charger la config** : `GET /store/settings`
+       Retourne devises supportées, taux de change, langues et limites médias.
+       À appeler au lancement de l'application front.
+    2. **Afficher le catalogue** : `GET /store/categories` puis `GET /store/products`
+       Les prix sont toujours en **XOF** (franc CFA).
+    3. **Convertir les prix côté front** (USD/EUR) avec `exchange_rates` reçus à l'étape 1.
+    4. **Panier / checkout** : `POST /store/checkout/preview` avec le champ `currency` pour obtenir les totaux formatés (`total_display`).
+    5. **Commander** : `POST /store/orders` — la commande est enregistrée en XOF ; la réponse peut inclure les montants dans la devise choisie.
+    6. **Suivi** : `GET /store/orders/{reference}` — paramètre `?currency=` pour l'affichage uniquement.
+
+    ---
+
+    ## Authentification admin (2FA)
+
+    Le login ne renvoie **pas** de token immédiatement. Flux en 2 étapes :
+
+    1. `POST /admin/auth/login` — vérifie email/mot de passe, envoie un code OTP par e-mail
+    2. `POST /admin/auth/otp/verify` — valide le code → retourne le **token Bearer**
+
+    Ensuite, envoyer `Authorization: Bearer {token}` sur toutes les routes `/admin/*` (sauf login/OTP).
+
+    ---
+
+    ## Devises — comment ça marche ?
+
+    **Référence unique : le XOF.** Tous les prix sont stockés et facturés en franc CFA.
+
+    | Étape | Comportement |
+    |-------|--------------|
+    | Catalogue (`GET /store/products`) | Prix en XOF uniquement — pas de paramètre `?currency=` |
+    | Affichage USD/EUR | Conversion **côté front** avec les taux de `GET /store/settings` |
+    | Checkout & commande | Passer `currency` dans le body (XOF, USD ou EUR) pour recevoir `subtotal_display`, `total_display`, etc. |
+    | Paiement réel | Toujours en **XOF**, quelle que soit la devise affichée |
+
+    Les taux proviennent de [Frankfurter](https://www.frankfurter.app/) (parité fixe XOF/EUR), mis en cache et rafraîchis toutes les **6 heures**.
+
+    ---
+
+    ## Langues
+
+    Français (`fr`) et anglais (`en`). Sur les routes boutique :
+
+    - paramètre de requête : `?lang=fr` ou `?lang=en`
+    - ou en-tête HTTP : `Accept-Language: fr`
+
+    Les libellés (noms de catégories, messages, etc.) suivent la langue demandée.
+
+    ---
+
+    ## Format des réponses
+
+    ```json
+    { "success": true, "message": "...", "data": { ... } }
+    ```
+
+    En cas d'erreur de validation : `success: false` et objet `errors` par champ.
+  version: 1.0.0
+  contact:
+    name: HAKAVOD97
+    email: larissabrou6@gmail.com
+
+servers:
+  - url: https://api-dev.hakavod97.com/api
+    description: Développement
+  - url: https://api.hakavod97.com/api
+    description: Production
+
+tags:
+  - name: Admin - Auth
+    description: Connexion 2FA (OTP), profil et mot de passe — point d'entrée du dashboard
+  - name: Admin - Catégories
+    description: Gestion des catégories et sous-catégories produits
+  - name: Admin - Produits
+    description: CRUD produits, images, vidéos, variantes (couleur/taille), publication
+  - name: Admin - Couleurs & Tailles
+    description: Référentiels couleurs et tailles pour les variantes
+  - name: Admin - Commandes
+    description: Liste, détail et mise à jour du statut des commandes clients
+  - name: Admin - Livraison
+    description: Zones et tarifs de livraison
+  - name: Admin - Utilisateurs
+    description: Comptes admin et rôles (super_admin uniquement)
+  - name: Admin - Dashboard
+    description: Statistiques, graphiques et alertes stock
+  - name: Public - Géographie
+    description: Régions et communes de Côte d'Ivoire (formulaire livraison)
+  - name: Store - Boutique
+    description: Catalogue public, checkout et commandes — sans authentification
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum
+
+  parameters:
+    CurrencyQuery:
+      name: currency
+      in: query
+      description: |
+        Devise d'affichage pour les montants formatés (`total_display`, etc.).
+        N'affecte pas les prix catalogue (toujours en XOF). Stockage et paiement en XOF.
+      schema:
+        type: string
+        enum: [XOF, USD, EUR]
+        default: XOF
+    LangQuery:
+      name: lang
+      in: query
+      description: Langue d'affichage (ou en-tête Accept-Language)
+      schema:
+        type: string
+        enum: [fr, en]
+        default: fr
+
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          nullable: true
+
+    ValidationError:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+        errors:
+          type: object
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [super_admin, admin, gestionnaire_stock, service_client]
+
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            token:
+              type: string
+            user:
+              $ref: '#/components/schemas/User'
+
+    OtpPendingResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            requires_otp:
+              type: boolean
+              example: true
+            email:
+              type: string
+              description: E-mail masqué
+              example: ad***@boutique.ci
+            expires_at:
+              type: string
+              format: date-time
+            expires_in:
+              type: integer
+              description: Secondes avant expiration
+              example: 600
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        is_active:
+          type: boolean
+        sub_categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubCategory'
+
+    SubCategory:
+      type: object
+      properties:
+        id:
+          type: integer
+        category_id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        is_active:
+          type: boolean
+
+    Color:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        hex_code:
+          type: string
+          example: "#FF5733"
+
+    Size:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        sort_order:
+          type: integer
+
+    ProductVariant:
+      type: object
+      properties:
+        id:
+          type: integer
+        color_id:
+          type: integer
+        size_id:
+          type: integer
+        stock:
+          type: integer
+        price:
+          type: number
+          nullable: true
+        sku:
+          type: string
+          nullable: true
+        color:
+          $ref: '#/components/schemas/Color'
+        size:
+          $ref: '#/components/schemas/Size'
+
+    PriceDisplay:
+      type: object
+      description: Prix pour affichage boutique (indicatif si devise ≠ XOF)
+      properties:
+        amount:
+          type: number
+        currency:
+          type: string
+          enum: [XOF, USD, EUR]
+        symbol:
+          type: string
+          example: "F CFA"
+        label:
+          type: string
+          example: Franc CFA
+        formatted:
+          type: string
+          example: "env. $72,00"
+        indicative:
+          type: boolean
+          description: true si conversion USD/EUR (prix non contractuel)
+        charged_in:
+          type: string
+          enum: [XOF]
+          description: Devise réelle au paiement
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        short_description:
+          type: string
+          nullable: true
+          description: Description courte (liste produits, cartes, aperçu)
+          maxLength: 500
+        description:
+          type: string
+          nullable: true
+          description: Description longue (fiche produit complète)
+        price:
+          type: number
+          description: Montant en XOF — conversion affichage gérée par le front
+        category_id:
+          type: integer
+        sub_category_id:
+          type: integer
+          nullable: true
+        status:
+          type: string
+          enum: [draft, available, preorder, out_of_stock]
+          description: |
+            `draft` = brouillon (création en cours).
+            Publication via `POST /admin/products/{id}/publish` après images + variantes.
+        preorder_available_date:
+          type: string
+          format: date
+          nullable: true
+        is_featured:
+          type: boolean
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductVariant'
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductMedia'
+        video:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/ProductMedia'
+          description: Vidéo produit optionnelle (1 max)
+
+    ProductMedia:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [image, video]
+        path:
+          type: string
+        url:
+          type: string
+        sort_order:
+          type: integer
+        is_primary:
+          type: boolean
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        reference:
+          type: string
+        status:
+          type: string
+          enum: [pending, confirmed, preparing, shipped, delivered, cancelled, preorder_pending, preorder_confirmed]
+        is_preorder:
+          type: boolean
+        customer_name:
+          type: string
+        customer_email:
+          type: string
+        customer_phone:
+          type: string
+        subtotal:
+          type: number
+        shipping_cost:
+          type: number
+        total:
+          type: number
+
+    ShippingZone:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        price:
+          type: number
+        delivery_days:
+          type: integer
+        is_active:
+          type: boolean
+
+    Region:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        code:
+          type: string
+
+    Commune:
+      type: object
+      properties:
+        id:
+          type: integer
+        region_id:
+          type: integer
+        name:
+          type: string
+        region:
+          $ref: '#/components/schemas/Region'
+
+paths:
+  /admin/auth/login:
+    post:
+      tags: [Admin - Auth]
+      summary: Connexion admin — étape 1 (envoi OTP)
+      description: |
+        Vérifie email/mot de passe et envoie un code OTP par e-mail.
+        Le token Sanctum n'est délivré qu'après `POST /admin/auth/otp/verify`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  example: larissabrou6@gmail.com
+                password:
+                  type: string
+                  example: password
+      responses:
+        '200':
+          description: Code OTP envoyé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OtpPendingResponse'
+        '422':
+          description: Identifiants invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '429':
+          description: Cooldown renvoi OTP
+
+  /admin/auth/otp/send:
+    post:
+      tags: [Admin - Auth]
+      summary: Renvoyer le code OTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  example: larissabrou6@gmail.com
+                password:
+                  type: string
+                  example: password
+      responses:
+        '200':
+          description: Nouveau code envoyé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OtpPendingResponse'
+        '429':
+          description: Cooldown actif (retry_after en secondes)
+
+  /admin/auth/otp/verify:
+    post:
+      tags: [Admin - Auth]
+      summary: Confirmer le code OTP — étape 2
+      description: Valide le code à 6 chiffres et retourne le token Sanctum.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code]
+              properties:
+                email:
+                  type: string
+                  example: larissabrou6@gmail.com
+                code:
+                  type: string
+                  minLength: 6
+                  maxLength: 6
+                  example: "482913"
+      responses:
+        '200':
+          description: Connexion réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '422':
+          description: Code invalide ou expiré
+
+  /admin/auth/logout:
+    post:
+      tags: [Admin - Auth]
+      summary: Déconnexion
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Token révoqué
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /admin/auth/me:
+    get:
+      tags: [Admin - Auth]
+      summary: Profil admin connecté
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Profil utilisateur
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+
+  /admin/auth/password:
+    put:
+      tags: [Admin - Auth]
+      summary: Changer le mot de passe
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, password, password_confirmation]
+              properties:
+                current_password:
+                  type: string
+                password:
+                  type: string
+                  minLength: 8
+                password_confirmation:
+                  type: string
+      responses:
+        '200':
+          description: Mot de passe mis à jour
+
+  /admin/categories:
+    get:
+      tags: [Admin - Catégories]
+      summary: Liste des catégories avec sous-catégories
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+    post:
+      tags: [Admin - Catégories]
+      summary: Créer une catégorie
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                is_active:
+                  type: boolean
+      responses:
+        '201':
+          description: Catégorie créée
+
+  /admin/categories/{id}:
+    put:
+      tags: [Admin - Catégories]
+      summary: Modifier une catégorie
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                is_active:
+                  type: boolean
+      responses:
+        '200':
+          description: Catégorie mise à jour
+    delete:
+      tags: [Admin - Catégories]
+      summary: Supprimer une catégorie
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Catégorie supprimée
+
+  /admin/categories/{id}/sub-categories:
+    post:
+      tags: [Admin - Catégories]
+      summary: Ajouter une sous-catégorie
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '201':
+          description: Sous-catégorie créée
+
+  /admin/sub-categories/{id}:
+    put:
+      tags: [Admin - Catégories]
+      summary: Modifier une sous-catégorie
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Sous-catégorie mise à jour
+    delete:
+      tags: [Admin - Catégories]
+      summary: Supprimer une sous-catégorie
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Sous-catégorie supprimée
+
+  /admin/products:
+    get:
+      tags: [Admin - Produits]
+      summary: Liste des produits
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: category_id
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, available, preorder, out_of_stock]
+        - name: stock
+          in: query
+          schema:
+            type: string
+            enum: [low, out]
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 15
+      responses:
+        '200':
+          description: Liste paginée
+    post:
+      tags: [Admin - Produits]
+      summary: Créer un produit (brouillon)
+      description: |
+        Étape 1 du flux produit. Le statut est toujours `draft`.
+        Enchaîner avec : images → vidéo (optionnel) → variantes → publication.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, price, category_id]
+              properties:
+                name:
+                  type: string
+                short_description:
+                  type: string
+                  description: Description courte (max 500 caractères)
+                description:
+                  type: string
+                  description: Description longue (fiche produit)
+                price:
+                  type: number
+                category_id:
+                  type: integer
+                sub_category_id:
+                  type: integer
+                is_featured:
+                  type: boolean
+      responses:
+        '201':
+          description: Produit créé en brouillon
+
+  /admin/products/{id}:
+    get:
+      tags: [Admin - Produits]
+      summary: Détail produit
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Product'
+    put:
+      tags: [Admin - Produits]
+      summary: Modifier un produit
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Produit mis à jour
+    delete:
+      tags: [Admin - Produits]
+      summary: Supprimer un produit
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Produit supprimé
+
+  /admin/media-limits:
+    get:
+      tags: [Admin - Produits]
+      summary: Limites upload images et vidéos
+      description: |
+        À utiliser côté dashboard admin pour configurer les formulaires d'upload.
+        Défaut : 10 images max (5 Mo chacune, WebP 1200px), 1 vidéo max (30 Mo).
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Limites images et vidéos
+
+  /admin/products/{id}/images:
+    post:
+      tags: [Admin - Produits]
+      summary: Uploader des images produit
+      description: |
+        Max 10 images par produit, 5 Mo chacune. Converties en WebP 1200px.
+        Voir `GET /admin/media-limits` pour les valeurs courantes.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '201':
+          description: Images uploadées
+
+  /admin/products/{id}/images/{imageId}:
+    delete:
+      tags: [Admin - Produits]
+      summary: Supprimer une image
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: imageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Image supprimée
+
+  /admin/products/{id}/video:
+    post:
+      tags: [Admin - Produits]
+      summary: Uploader une vidéo produit
+      description: |
+        Vidéo optionnelle (1 par produit). Remplace la vidéo existante si présente.
+        Formats : MP4, WebM, MOV. Taille max configurable (défaut 30 Mo).
+        Voir `GET /admin/media-limits`.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [video]
+              properties:
+                video:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Vidéo uploadée
+    delete:
+      tags: [Admin - Produits]
+      summary: Supprimer la vidéo produit
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Vidéo supprimée
+
+  /admin/products/{id}/publish:
+    post:
+      tags: [Admin - Produits]
+      summary: Publier un produit
+      description: |
+        Étape 4 du flux. Requiert au moins une image et une variante (couleur + taille).
+        Si le stock total est 0 et `mode=available`, le statut devient `out_of_stock`.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mode:
+                  type: string
+                  enum: [available, preorder]
+                  default: available
+                preorder_available_date:
+                  type: string
+                  format: date
+                  description: Requis si mode=preorder
+      responses:
+        '200':
+          description: Produit publié
+        '422':
+          description: Produit incomplet (images ou variantes manquantes)
+
+  /admin/products/{id}/unpublish:
+    post:
+      tags: [Admin - Produits]
+      summary: Remettre un produit en brouillon
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Produit remis en brouillon
+
+  /admin/products/{id}/variants:
+    put:
+      tags: [Admin - Produits]
+      summary: Mettre à jour les variantes (étape 3)
+      description: Au moins une variante couleur + taille est obligatoire.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [variants]
+              properties:
+                variants:
+                  type: array
+                  items:
+                    type: object
+                    required: [color_id, size_id, stock]
+                    properties:
+                      color_id:
+                        type: integer
+                      size_id:
+                        type: integer
+                      stock:
+                        type: integer
+                      price:
+                        type: number
+                      sku:
+                        type: string
+      responses:
+        '200':
+          description: Variantes mises à jour
+
+  /admin/colors:
+    get:
+      tags: [Admin - Couleurs & Tailles]
+      summary: Liste des couleurs
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Color'
+    post:
+      tags: [Admin - Couleurs & Tailles]
+      summary: Ajouter une couleur
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, hex_code]
+              properties:
+                name:
+                  type: string
+                hex_code:
+                  type: string
+                  example: "#000000"
+      responses:
+        '201':
+          description: Couleur créée
+
+  /admin/colors/{id}:
+    delete:
+      tags: [Admin - Couleurs & Tailles]
+      summary: Supprimer une couleur
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Couleur supprimée
+
+  /admin/sizes:
+    get:
+      tags: [Admin - Couleurs & Tailles]
+      summary: Liste des tailles
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Size'
+    post:
+      tags: [Admin - Couleurs & Tailles]
+      summary: Ajouter une taille
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                sort_order:
+                  type: integer
+      responses:
+        '201':
+          description: Taille créée
+
+  /admin/sizes/{id}:
+    delete:
+      tags: [Admin - Couleurs & Tailles]
+      summary: Supprimer une taille
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Taille supprimée
+
+  /admin/orders:
+    get:
+      tags: [Admin - Commandes]
+      summary: Liste des commandes
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [preorder]
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Liste paginée
+
+  /admin/orders/preorders:
+    get:
+      tags: [Admin - Commandes]
+      summary: Liste des précommandes
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Précommandes
+
+  /admin/orders/{id}:
+    get:
+      tags: [Admin - Commandes]
+      summary: Détail commande
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Order'
+
+  /admin/orders/{id}/status:
+    put:
+      tags: [Admin - Commandes]
+      summary: Changer le statut
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [pending, confirmed, preparing, shipped, delivered, cancelled, preorder_pending, preorder_confirmed]
+                note:
+                  type: string
+      responses:
+        '200':
+          description: Statut mis à jour
+
+  /admin/shipping-zones:
+    get:
+      tags: [Admin - Livraison]
+      summary: Liste des zones de livraison
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ShippingZone'
+    post:
+      tags: [Admin - Livraison]
+      summary: Créer une zone
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, price]
+              properties:
+                name:
+                  type: string
+                commune_id:
+                  type: integer
+                region_id:
+                  type: integer
+                price:
+                  type: number
+                delivery_days:
+                  type: integer
+      responses:
+        '201':
+          description: Zone créée
+
+  /admin/shipping-zones/{id}:
+    put:
+      tags: [Admin - Livraison]
+      summary: Modifier une zone
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Zone mise à jour
+
+  /admin/users:
+    get:
+      tags: [Admin - Utilisateurs]
+      summary: Liste des admins (super_admin)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Liste des comptes admin
+    post:
+      tags: [Admin - Utilisateurs]
+      summary: Créer un admin
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password, role]
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+                phone:
+                  type: string
+                role:
+                  type: string
+                  enum: [super_admin, admin, gestionnaire_stock, service_client]
+      responses:
+        '201':
+          description: Admin créé
+
+  /admin/users/{id}/role:
+    put:
+      tags: [Admin - Utilisateurs]
+      summary: Changer le rôle
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  type: string
+      responses:
+        '200':
+          description: Rôle mis à jour
+
+  /admin/users/{id}:
+    delete:
+      tags: [Admin - Utilisateurs]
+      summary: Désactiver un compte admin
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Compte désactivé
+
+  /admin/dashboard/stats:
+    get:
+      tags: [Admin - Dashboard]
+      summary: Statistiques clés
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: CA, commandes du jour, etc.
+
+  /admin/dashboard/orders-chart:
+    get:
+      tags: [Admin - Dashboard]
+      summary: Évolution commandes 30 jours
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Données graphique
+
+  /admin/dashboard/top-products:
+    get:
+      tags: [Admin - Dashboard]
+      summary: Produits les plus commandés
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Top produits
+
+  /admin/dashboard/stock-alerts:
+    get:
+      tags: [Admin - Dashboard]
+      summary: Alertes stock bas
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: threshold
+          in: query
+          schema:
+            type: integer
+            default: 5
+      responses:
+        '200':
+          description: Produits en stock faible
+
+  /regions:
+    get:
+      tags: [Public - Géographie]
+      summary: Liste des régions Côte d'Ivoire
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Region'
+
+  /communes:
+    get:
+      tags: [Public - Géographie]
+      summary: Liste des communes
+      parameters:
+        - name: region
+          in: query
+          description: Filtrer par ID région
+          schema:
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Commune'
+
+  /store/settings:
+    get:
+      tags: [Store - Boutique]
+      summary: Paramètres boutique (devises, langues, médias)
+      description: |
+        **À appeler au démarrage de l'app** (pattern standard e-commerce).
+        Retourne devises, taux de change, langues et limites médias (`media_limits`).
+        Le front stocke la devise choisie et convertit les prix XOF localement.
+      parameters:
+        - name: lang
+          in: query
+          schema:
+            type: string
+            enum: [fr, en]
+            default: fr
+      responses:
+        '200':
+          description: Devises XOF/USD/EUR et langues FR/EN
+
+  /store/categories:
+    get:
+      tags: [Store - Boutique]
+      summary: Arbre catégories public
+      parameters:
+        - $ref: '#/components/parameters/LangQuery'
+      responses:
+        '200':
+          description: Catégories actives
+
+  /store/products:
+    get:
+      tags: [Store - Boutique]
+      summary: Catalogue public (prix en XOF)
+      description: |
+        Retourne les prix en XOF uniquement. Le front convertit pour l'affichage
+        USD/EUR avec les taux de `GET /store/settings`.
+      parameters:
+        - name: category_id
+          in: query
+          schema:
+            type: integer
+        - name: sub_category_id
+          in: query
+          schema:
+            type: integer
+        - name: color_id
+          in: query
+          schema:
+            type: integer
+        - name: size_id
+          in: query
+          schema:
+            type: integer
+        - name: min_price
+          in: query
+          schema:
+            type: number
+        - name: max_price
+          in: query
+          schema:
+            type: number
+        - name: featured
+          in: query
+          schema:
+            type: boolean
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [latest, price_asc, price_desc]
+      responses:
+        '200':
+          description: Catalogue paginé
+
+  /store/products/{id}:
+    get:
+      tags: [Store - Boutique]
+      summary: Fiche produit publique (prix en XOF)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Détail produit, prix en XOF
+
+  /store/checkout/preview:
+    post:
+      tags: [Store - Boutique]
+      summary: Récapitulatif checkout (devise choisie)
+      description: |
+        À appeler sur la page panier/checkout **avant** validation.
+        Affiche sous-total, livraison et total dans la devise choisie.
+        Les montants XOF restent la référence pour le paiement réel.
+      parameters:
+        - $ref: '#/components/parameters/LangQuery'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              properties:
+                items:
+                  type: array
+                  items:
+                    type: object
+                    required: [product_id, product_variant_id, quantity]
+                    properties:
+                      product_id:
+                        type: integer
+                      product_variant_id:
+                        type: integer
+                      quantity:
+                        type: integer
+                shipping_zone_id:
+                  type: integer
+                currency:
+                  type: string
+                  enum: [XOF, USD, EUR]
+                  default: XOF
+      responses:
+        '200':
+          description: Récap avec total_display dans la devise demandée
+
+  /store/orders:
+    post:
+      tags: [Store - Boutique]
+      summary: Passer une commande
+      description: |
+        Enregistre la commande en **XOF**. Passer `currency` pour la réponse
+        d'affichage (confirmation) dans la devise choisie par l'utilisateur.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [customer_name, customer_email, customer_phone, shipping_address, commune_id, items]
+              properties:
+                customer_name:
+                  type: string
+                customer_email:
+                  type: string
+                customer_phone:
+                  type: string
+                shipping_address:
+                  type: string
+                commune_id:
+                  type: integer
+                shipping_zone_id:
+                  type: integer
+                notes:
+                  type: string
+                currency:
+                  type: string
+                  enum: [XOF, USD, EUR]
+                  description: Devise d'affichage de la confirmation
+                lang:
+                  type: string
+                  enum: [fr, en]
+                items:
+                  type: array
+                  items:
+                    type: object
+                    required: [product_id, product_variant_id, quantity]
+                    properties:
+                      product_id:
+                        type: integer
+                      product_variant_id:
+                        type: integer
+                        description: Obligatoire — couleur et taille choisies
+                      quantity:
+                        type: integer
+      responses:
+        '201':
+          description: Commande créée avec total_display
+
+  /store/orders/{reference}:
+    get:
+      tags: [Store - Boutique]
+      summary: Suivi commande par référence
+      parameters:
+        - $ref: '#/components/parameters/CurrencyQuery'
+        - $ref: '#/components/parameters/LangQuery'
+        - name: reference
+          in: path
+          required: true
+          schema:
+            type: string
+            example: CMD-AB12CD34
+      responses:
+        '200':
+          description: Statut commande

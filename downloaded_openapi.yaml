@@ -1,0 +1,3399 @@
+openapi: 3.0.3
+info:
+  title: HAKAVOD97 E-commerce API
+  description: |
+    API REST pour la boutique mode/luxe **HAKAVOD97** (catalogue, commandes, livraison, back-office).
+
+    ---
+
+    ## À qui sert cette API ?
+
+    | Client | Préfixe | Authentification |
+    |--------|---------|------------------|
+    | **Site vitrine / boutique** (front public) | `/store/*`, `/regions`, `/communes` | Routes publiques + Bearer optionnel (client) |
+    | **Dashboard admin** (gestion interne) | `/admin/*` | Bearer token Sanctum (voir ci-dessous) |
+
+    Toutes les routes sont préfixées par `/api` (ex. `GET /api/store/products`).
+
+    ---
+
+    ## Démarrage rapide — intégrer la boutique
+
+    1. **Charger la config** : `GET /store/settings`
+       Retourne devises supportées, taux de change, langues et limites médias.
+       À appeler au lancement de l'application front.
+    2. **Afficher le catalogue** : `GET /store/categories` puis `GET /store/products`
+       Les prix sont toujours en **XOF** (franc CFA).
+    3. **Convertir les prix côté front** (USD/EUR) avec `exchange_rates` reçus à l'étape 1.
+    4. **Panier / checkout** : `POST /store/checkout/preview` avec `use_cart: true` (ou `items[]`) et `currency` pour les totaux formatés (`total_display`). La livraison est incluse dans les prix (`shipping_cost` = 0).
+    5. **Commander** : `POST /store/orders` depuis le panier serveur (Bearer ou `X-Guest-Token`) — la commande est enregistrée en XOF.
+    6. **Payer** : `POST /store/orders/{reference}/payments` — mobile money (Orange, Moov, MTN, Wave) ou Visa (bientôt). Le montant débité est en XOF.
+    7. **Polling front** : `GET /store/orders/{reference}/payments/status` — lit le statut **gateway** (`gateway_status`) sans écrire en base ; le champ `status` reflète la base (mis à jour par le webhook).
+    8. **Webhook** (gateway → API) : `POST /webhooks/aggregpay` — **seul** mécanisme qui confirme ou annule la commande en base.
+    9. **Suivi commande** : `GET /store/orders/{reference}` — statut logistique (`pending`, `confirmed`, `shipped`…).
+    10. **Compte client** : téléphone (OTP SMS à l'inscription puis mot de passe), e-mail + mot de passe, Google ou Facebook — `POST /store/auth/*` → token Bearer.
+    11. **Panier serveur** : `GET/POST /store/cart` — invité via `X-Guest-Token` ; client connecté via `Authorization: Bearer` (panier lié au compte, `guest_token` = `null`).
+    12. **Favoris** : `POST/DELETE /store/favorites/{productId}` — client connecté uniquement, au niveau **produit** (pas de variante).
+    13. **Après connexion** : `POST /store/cart/merge` avec `X-Guest-Token` pour récupérer le panier invité ; `GET /store/orders` pour l'historique.
+
+    ---
+
+    ## Authentification admin (2FA)
+
+    Le login ne renvoie **pas** de token immédiatement. Flux en 2 étapes :
+
+    1. `POST /admin/auth/login` — vérifie email/mot de passe, envoie un code OTP par e-mail
+    2. `POST /admin/auth/otp/verify` — valide le code → retourne le **token Bearer**
+
+    Ensuite, envoyer `Authorization: Bearer {token}` sur toutes les routes `/admin/*` (sauf login/OTP).
+
+    ---
+
+    ## Devises — comment ça marche ?
+
+    **Référence unique : le XOF.** Tous les prix sont stockés et facturés en franc CFA.
+
+    | Étape | Comportement |
+    |-------|--------------|
+    | Catalogue (`GET /store/products`) | Prix en XOF uniquement — pas de paramètre `?currency=` |
+    | Affichage USD/EUR | Conversion **côté front** avec les taux de `GET /store/settings` |
+    | Checkout & commande | Passer `currency` dans le body (XOF, USD ou EUR) pour recevoir `subtotal_display`, `total_display`, etc. |
+    | Paiement réel | Toujours en **XOF**, quelle que soit la devise affichée |
+
+    Les taux proviennent de [Frankfurter](https://www.frankfurter.app/) (parité fixe XOF/EUR), mis en cache et rafraîchis toutes les **6 heures**.
+
+    ---
+
+    ## Langues
+
+    Français (`fr`) et anglais (`en`). Sur les routes boutique :
+
+    - paramètre de requête : `?lang=fr` ou `?lang=en`
+    - ou en-tête HTTP : `Accept-Language: fr`
+
+    Les libellés (noms de catégories, messages, etc.) suivent la langue demandée.
+
+    ---
+
+    ## Médias produit (images & vidéo)
+
+    Chaque produit expose ses photos via le tableau `images` et sa vidéo via le champ `video` (optionnel, 1 max).
+    **Toujours utiliser `url` pour afficher un média** — `path` est un chemin interne de stockage.
+
+    | Champ | Rôle |
+    |-------|------|
+    | `sort_order` | Ordre d'affichage dans la galerie (0 = première) |
+    | `is_primary` | Image de couverture (cartes produit, vignettes, partage) |
+
+    ### Front vitrine (boutique)
+
+    - **Liste / cartes** : image où `is_primary === true`.
+      Repli si aucune n'est marquée : première entrée de `images` (déjà triée par `sort_order`).
+    - **Fiche produit** : galerie = toutes les `images` dans l'ordre `sort_order`.
+    - **Vidéo** : champ séparé `video` (absent de `images`).
+
+    ### Dashboard admin
+
+    1. `POST /admin/products/{id}/images` — au **premier** upload du produit, la 1ʳᵉ image du lot reçoit `is_primary: true` automatiquement. Les uploads suivants ont `is_primary: false`.
+    2. `PUT /admin/products/{id}/images/{imageId}/primary` — changer l'image de couverture.
+    3. `PUT /admin/products/{id}/images/reorder` — réordonne la galerie (`sort_order`) **sans** modifier `is_primary`.
+    4. `DELETE /admin/products/{id}/images/{imageId}` — si l'image principale est supprimée, la première restante (par `sort_order`) devient principale.
+
+    ---
+
+    ## Format des réponses
+
+    ```json
+    { "success": true, "message": "...", "data": { ... } }
+    ```
+
+    En cas d'erreur de validation : `success: false` et objet `errors` par champ.
+  version: 1.0.0
+  contact:
+    name: HAKAVOD97
+    email: larissabrou6@gmail.com
+
+servers:
+  - url: https://api-dev.hakavod97.com/api
+    description: Développement
+  - url: https://api.hakavod97.com/api
+    description: Production
+
+tags:
+  - name: Admin - Auth
+    description: Connexion 2FA (OTP), profil et mot de passe — point d'entrée du dashboard
+  - name: Admin - Catégories
+    description: Gestion des catégories et sous-catégories produits
+  - name: Admin - Produits
+    description: CRUD produits, images, vidéos, variantes (couleur/taille), publication
+  - name: Admin - Couleurs & Tailles
+    description: Référentiels couleurs et tailles pour les variantes
+  - name: Admin - Commandes
+    description: Liste, détail et mise à jour du statut des commandes clients
+  - name: Admin - Livraison
+    description: Zones et tarifs de livraison
+  - name: Admin - Utilisateurs
+    description: Comptes admin et rôles (super_admin uniquement)
+  - name: Admin - Dashboard
+    description: Statistiques, graphiques et alertes stock
+  - name: Admin - Notifications
+    description: Templates e-mail promotionnels, campagnes programmées ou envoi immédiat aux clients
+  - name: Public - Géographie
+    description: Régions et communes de Côte d'Ivoire (formulaire livraison)
+  - name: Store - Boutique
+    description: Catalogue public, checkout et commandes — sans authentification
+  - name: Store - Client
+    description: Inscription, connexion (téléphone, e-mail, Google, Facebook), panier, favoris, adresses et commandes client
+  - name: Webhooks
+    description: Callbacks serveur-à-serveur (passerelle de paiement AggregPay)
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum
+
+  parameters:
+    CurrencyQuery:
+      name: currency
+      in: query
+      description: |
+        Devise d'affichage pour les montants formatés (`total_display`, etc.).
+        N'affecte pas les prix catalogue (toujours en XOF). Stockage et paiement en XOF.
+      schema:
+        type: string
+        enum: [XOF, USD, EUR]
+        default: XOF
+    LangQuery:
+      name: lang
+      in: query
+      description: Langue d'affichage (ou en-tête Accept-Language)
+      schema:
+        type: string
+        enum: [fr, en]
+        default: fr
+
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          nullable: true
+
+    ValidationError:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+        errors:
+          type: object
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum: [super_admin, admin, gestionnaire_stock, service_client]
+
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            token:
+              type: string
+            user:
+              $ref: '#/components/schemas/User'
+
+    OtpPendingResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+          properties:
+            requires_otp:
+              type: boolean
+              example: true
+            email:
+              type: string
+              description: E-mail masqué
+              example: ad***@boutique.ci
+            expires_at:
+              type: string
+              format: date-time
+            expires_in:
+              type: integer
+              description: Secondes avant expiration
+              example: 600
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        is_active:
+          type: boolean
+        sub_categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubCategory'
+
+    SubCategory:
+      type: object
+      properties:
+        id:
+          type: integer
+        category_id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        is_active:
+          type: boolean
+
+    Color:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        hex_code:
+          type: string
+          example: "#FF5733"
+
+    Size:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        sort_order:
+          type: integer
+
+    NotificationTemplate:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+          enum: [promotion, newsletter, custom]
+        subject:
+          type: string
+        body_html:
+          type: string
+          description: HTML avec variables {{customer_name}}, {{promotion_title}}, etc.
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    NotificationCampaign:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        notification_template_id:
+          type: integer
+          nullable: true
+        subject:
+          type: string
+          nullable: true
+        body_html:
+          type: string
+          nullable: true
+        audience_type:
+          type: string
+          enum: [all_clients, custom_list]
+        custom_emails:
+          type: array
+          items:
+            type: string
+            format: email
+          nullable: true
+        variables:
+          type: object
+          nullable: true
+          properties:
+            promotion_title:
+              type: string
+            promotion_description:
+              type: string
+            promotion_code:
+              type: string
+            cta_url:
+              type: string
+              format: uri
+        scheduled_at:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum: [draft, scheduled, processing, sent, failed, cancelled]
+        sent_at:
+          type: string
+          format: date-time
+          nullable: true
+        total_recipients:
+          type: integer
+        sent_count:
+          type: integer
+        failed_count:
+          type: integer
+
+    ProductVariant:
+      type: object
+      properties:
+        id:
+          type: integer
+        color_id:
+          type: integer
+        size_id:
+          type: integer
+        stock:
+          type: integer
+        price:
+          type: number
+          nullable: true
+        sku:
+          type: string
+          nullable: true
+        color:
+          $ref: '#/components/schemas/Color'
+        size:
+          $ref: '#/components/schemas/Size'
+
+    PriceDisplay:
+      type: object
+      description: Prix pour affichage boutique (indicatif si devise ≠ XOF)
+      properties:
+        amount:
+          type: number
+        currency:
+          type: string
+          enum: [XOF, USD, EUR]
+        symbol:
+          type: string
+          example: "F CFA"
+        label:
+          type: string
+          example: Franc CFA
+        formatted:
+          type: string
+          example: "env. $72,00"
+        indicative:
+          type: boolean
+          description: true si conversion USD/EUR (prix non contractuel)
+        charged_in:
+          type: string
+          enum: [XOF]
+          description: Devise réelle au paiement
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        short_description:
+          type: string
+          nullable: true
+          description: Description courte (liste produits, cartes, aperçu)
+          maxLength: 500
+        description:
+          type: string
+          nullable: true
+          description: Description longue (fiche produit complète)
+        price:
+          type: number
+          description: Montant en XOF — conversion affichage gérée par le front
+        category_id:
+          type: integer
+        sub_category_id:
+          type: integer
+          nullable: true
+        status:
+          type: string
+          enum: [draft, available, preorder, out_of_stock]
+          description: |
+            `draft` = brouillon (création en cours).
+            Publication via `POST /admin/products/{id}/publish` après images + variantes.
+        preorder_available_date:
+          type: string
+          format: date
+          nullable: true
+        is_featured:
+          type: boolean
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductVariant'
+        images:
+          type: array
+          description: |
+            Photos du produit, triées par `sort_order` croissant.
+            Vignette catalogue : l'entrée avec `is_primary: true` (voir section « Médias produit »).
+          items:
+            $ref: '#/components/schemas/ProductMedia'
+        video:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/ProductMedia'
+          description: Vidéo produit optionnelle (1 max), hors tableau `images`
+
+    ProductMedia:
+      type: object
+      description: Média produit (image ou vidéo). Utiliser `url` pour l'affichage front.
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [image, video]
+          description: "`image` pour les photos ; `video` pour la vidéo produit."
+        path:
+          type: string
+          description: Chemin interne de stockage — ne pas utiliser dans `<img src>` ou `<video src>`.
+        url:
+          type: string
+          description: URL publique absolue prête à l'emploi (ex. `https://api…/storage/products/1/….webp`).
+          example: https://api-dev.hakavod97.com/storage/products/1/a1b2c3d4-e5f6-7890-abcd-ef1234567890.webp
+        sort_order:
+          type: integer
+          description: Position dans la galerie (0 = première). Indépendant de `is_primary`.
+          example: 0
+        is_primary:
+          type: boolean
+          description: |
+            `true` = image de couverture (cartes catalogue, vignettes). Une seule image principale par produit.
+            Toujours `false` pour les vidéos.
+          example: true
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        reference:
+          type: string
+        status:
+          type: string
+          enum: [pending, confirmed, preparing, shipped, delivered, cancelled, preorder_pending, preorder_confirmed]
+        is_preorder:
+          type: boolean
+        customer_name:
+          type: string
+        customer_email:
+          type: string
+        customer_phone:
+          type: string
+        subtotal:
+          type: number
+        shipping_cost:
+          type: number
+          description: Toujours 0 — la livraison est incluse dans les prix des articles.
+        total:
+          type: number
+
+    Payment:
+      type: object
+      description: |
+        Paiement mobile money via AggregPay (payment.czotick.com).
+
+        - **`status`** : statut persisté en base (source de vérité métier). Mis à jour **uniquement** par le webhook.
+        - **`gateway_status`** : statut live côté opérateur (polling front). Ne modifie pas la base.
+      properties:
+        gateway_reference:
+          type: string
+          example: PAY-AB12CD34EF
+          description: Référence envoyée au gateway (`order_id` côté AggregPay).
+        payment_type:
+          type: string
+          enum: [mobile_money, visa]
+        status:
+          type: string
+          enum: [PENDING, SUCCESS, FAILED]
+          description: Statut en base (webhook).
+        gateway_status:
+          type: string
+          enum: [PENDING, SUCCESS, FAILED, CANCELLED]
+          description: Statut live gateway (endpoint status uniquement, non persisté).
+        gateway_message:
+          type: string
+          nullable: true
+          description: Message d'erreur gateway le cas échéant.
+        amount:
+          type: integer
+          description: Montant débité en XOF (200 en mode test si `PAYMENT_GATEWAY_TEST_MODE=true`).
+        order_total:
+          type: integer
+          nullable: true
+          description: Total réel de la commande (présent en mode test).
+        test_mode:
+          type: boolean
+          nullable: true
+        currency:
+          type: string
+          example: XOF
+        operator:
+          type: string
+          enum: [orange, moov, mtn, wave]
+          nullable: true
+        phone_number:
+          type: string
+          nullable: true
+        country:
+          type: string
+          example: CI
+        aggregator:
+          type: string
+          example: aggregpay
+          nullable: true
+        fee_rate_percent:
+          type: number
+          nullable: true
+        fee_amount:
+          type: number
+          nullable: true
+        net_amount:
+          type: number
+          nullable: true
+        provider_link:
+          type: string
+          format: uri
+          nullable: true
+          description: URL de redirection Wave.
+        failure_message:
+          type: string
+          nullable: true
+        paid_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    ShippingZone:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        price:
+          type: number
+        delivery_days:
+          type: integer
+        is_active:
+          type: boolean
+
+    Region:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        code:
+          type: string
+
+    Commune:
+      type: object
+      properties:
+        id:
+          type: integer
+        region_id:
+          type: integer
+        name:
+          type: string
+        region:
+          $ref: '#/components/schemas/Region'
+
+paths:
+  /admin/auth/login:
+    post:
+      tags: [Admin - Auth]
+      summary: Connexion admin — étape 1 (envoi OTP)
+      description: |
+        Vérifie email/mot de passe et envoie un code OTP par e-mail.
+        Le token Sanctum n'est délivré qu'après `POST /admin/auth/otp/verify`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  example: larissabrou6@gmail.com
+                password:
+                  type: string
+                  example: password
+      responses:
+        '200':
+          description: Code OTP envoyé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OtpPendingResponse'
+        '422':
+          description: Identifiants invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '429':
+          description: Cooldown renvoi OTP
+
+  /admin/auth/otp/send:
+    post:
+      tags: [Admin - Auth]
+      summary: Renvoyer le code OTP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  example: larissabrou6@gmail.com
+                password:
+                  type: string
+                  example: password
+      responses:
+        '200':
+          description: Nouveau code envoyé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OtpPendingResponse'
+        '429':
+          description: Cooldown actif (retry_after en secondes)
+
+  /admin/auth/otp/verify:
+    post:
+      tags: [Admin - Auth]
+      summary: Confirmer le code OTP — étape 2
+      description: Valide le code à 6 chiffres et retourne le token Sanctum.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code]
+              properties:
+                email:
+                  type: string
+                  example: larissabrou6@gmail.com
+                code:
+                  type: string
+                  minLength: 6
+                  maxLength: 6
+                  example: "482913"
+      responses:
+        '200':
+          description: Connexion réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '422':
+          description: Code invalide ou expiré
+
+  /admin/auth/logout:
+    post:
+      tags: [Admin - Auth]
+      summary: Déconnexion
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Token révoqué
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /admin/auth/me:
+    get:
+      tags: [Admin - Auth]
+      summary: Profil admin connecté
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Profil utilisateur
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/User'
+
+  /admin/auth/password:
+    put:
+      tags: [Admin - Auth]
+      summary: Changer le mot de passe
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, password, password_confirmation]
+              properties:
+                current_password:
+                  type: string
+                password:
+                  type: string
+                  minLength: 8
+                password_confirmation:
+                  type: string
+      responses:
+        '200':
+          description: Mot de passe mis à jour
+
+  /admin/categories:
+    get:
+      tags: [Admin - Catégories]
+      summary: Liste des catégories avec sous-catégories
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+    post:
+      tags: [Admin - Catégories]
+      summary: Créer une catégorie
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                is_active:
+                  type: boolean
+      responses:
+        '201':
+          description: Catégorie créée
+
+  /admin/categories/{id}:
+    put:
+      tags: [Admin - Catégories]
+      summary: Modifier une catégorie
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                is_active:
+                  type: boolean
+      responses:
+        '200':
+          description: Catégorie mise à jour
+    delete:
+      tags: [Admin - Catégories]
+      summary: Supprimer une catégorie
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Catégorie supprimée
+
+  /admin/categories/{id}/sub-categories:
+    post:
+      tags: [Admin - Catégories]
+      summary: Ajouter une sous-catégorie
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '201':
+          description: Sous-catégorie créée
+
+  /admin/sub-categories/{id}:
+    put:
+      tags: [Admin - Catégories]
+      summary: Modifier une sous-catégorie
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Sous-catégorie mise à jour
+    delete:
+      tags: [Admin - Catégories]
+      summary: Supprimer une sous-catégorie
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Sous-catégorie supprimée
+
+  /admin/products:
+    get:
+      tags: [Admin - Produits]
+      summary: Liste des produits
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: category_id
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, available, preorder, out_of_stock]
+        - name: stock
+          in: query
+          schema:
+            type: string
+            enum: [low, out]
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 15
+      responses:
+        '200':
+          description: Liste paginée
+    post:
+      tags: [Admin - Produits]
+      summary: Créer un produit (brouillon)
+      description: |
+        Étape 1 du flux produit. Le statut est toujours `draft`.
+        Enchaîner avec : images → vidéo (optionnel) → variantes → publication.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, price, category_id]
+              properties:
+                name:
+                  type: string
+                short_description:
+                  type: string
+                  description: Description courte (max 500 caractères)
+                description:
+                  type: string
+                  description: Description longue (fiche produit)
+                price:
+                  type: number
+                category_id:
+                  type: integer
+                sub_category_id:
+                  type: integer
+                is_featured:
+                  type: boolean
+      responses:
+        '201':
+          description: Produit créé en brouillon
+
+  /admin/products/{id}:
+    get:
+      tags: [Admin - Produits]
+      summary: Détail produit
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Product'
+    put:
+      tags: [Admin - Produits]
+      summary: Modifier un produit
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Produit mis à jour
+    delete:
+      tags: [Admin - Produits]
+      summary: Supprimer un produit
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Produit supprimé
+
+  /admin/media-limits:
+    get:
+      tags: [Admin - Produits]
+      summary: Limites upload images et vidéos
+      description: |
+        À utiliser côté dashboard admin pour configurer les formulaires d'upload.
+        Défaut : 10 images max (5 Mo chacune, WebP 1200px), 1 vidéo max (30 Mo).
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Limites images et vidéos
+
+  /admin/products/{id}/images:
+    post:
+      tags: [Admin - Produits]
+      summary: Uploader des images produit
+      description: |
+        Max 10 images par produit, 5 Mo chacune. Converties en WebP 1200px.
+        Voir `GET /admin/media-limits` pour les valeurs courantes.
+
+        **Image principale automatique** : si le produit n'a encore aucune image, la 1ʳᵉ image
+        de ce lot reçoit `is_primary: true`. Sinon, les nouvelles images arrivent avec `is_primary: false`
+        — utiliser `PUT …/images/{imageId}/primary` pour changer la couverture.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '201':
+          description: Images uploadées
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Images uploadées
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProductMedia'
+              example:
+                success: true
+                message: Images uploadées
+                data:
+                  - id: 12
+                    type: image
+                    path: products/1/a1b2c3d4-e5f6-7890-abcd-ef1234567890.webp
+                    url: https://api-dev.hakavod97.com/storage/products/1/a1b2c3d4-e5f6-7890-abcd-ef1234567890.webp
+                    sort_order: 0
+                    is_primary: true
+                  - id: 13
+                    type: image
+                    path: products/1/b2c3d4e5-f6a7-8901-bcde-f12345678901.webp
+                    url: https://api-dev.hakavod97.com/storage/products/1/b2c3d4e5-f6a7-8901-bcde-f12345678901.webp
+                    sort_order: 1
+                    is_primary: false
+
+  /admin/products/{id}/images/reorder:
+    put:
+      tags: [Admin - Produits]
+      summary: Réordonner les images produit
+      description: |
+        Envoyer la liste complète des IDs d'images dans l'ordre souhaité.
+        Ne modifie pas l'image principale (`is_primary`).
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [image_ids]
+              properties:
+                image_ids:
+                  type: array
+                  items:
+                    type: integer
+                  example: [12, 15, 14]
+      responses:
+        '200':
+          description: Ordre des images mis à jour
+
+  /admin/products/{id}/images/{imageId}:
+    delete:
+      tags: [Admin - Produits]
+      summary: Supprimer une image
+      description: |
+        Si l'image supprimée était principale, la première image restante devient principale.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: imageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Image supprimée
+
+  /admin/products/{id}/images/{imageId}/primary:
+    put:
+      tags: [Admin - Produits]
+      summary: Définir l'image principale
+      description: |
+        Marque l'image indiquée comme couverture (`is_primary: true`) et remet toutes les autres à `false`.
+        Corps de requête vide. Ne modifie pas `sort_order`.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: imageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Image principale mise à jour
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Image principale mise à jour
+                  data:
+                    $ref: '#/components/schemas/ProductMedia'
+              example:
+                success: true
+                message: Image principale mise à jour
+                data:
+                  id: 15
+                  type: image
+                  path: products/1/c3d4e5f6-a7b8-9012-cdef-123456789012.webp
+                  url: https://api-dev.hakavod97.com/storage/products/1/c3d4e5f6-a7b8-9012-cdef-123456789012.webp
+                  sort_order: 2
+                  is_primary: true
+
+  /admin/products/{id}/video:
+    post:
+      tags: [Admin - Produits]
+      summary: Uploader une vidéo produit
+      description: |
+        Vidéo optionnelle (1 par produit). Remplace la vidéo existante si présente.
+        Formats : MP4, WebM, MOV. Taille max configurable (défaut 30 Mo).
+        Voir `GET /admin/media-limits`.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [video]
+              properties:
+                video:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Vidéo uploadée
+    delete:
+      tags: [Admin - Produits]
+      summary: Supprimer la vidéo produit
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Vidéo supprimée
+
+  /admin/products/{id}/publish:
+    post:
+      tags: [Admin - Produits]
+      summary: Publier un produit
+      description: |
+        Étape 4 du flux. Requiert au moins une image et une variante (couleur + taille).
+        Si le stock total est 0 et `mode=available`, le statut devient `out_of_stock`.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mode:
+                  type: string
+                  enum: [available, preorder]
+                  default: available
+                preorder_available_date:
+                  type: string
+                  format: date
+                  description: Requis si mode=preorder
+      responses:
+        '200':
+          description: Produit publié
+        '422':
+          description: Produit incomplet (images ou variantes manquantes)
+
+  /admin/products/{id}/unpublish:
+    post:
+      tags: [Admin - Produits]
+      summary: Remettre un produit en brouillon
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Produit remis en brouillon
+
+  /admin/products/{id}/variants:
+    put:
+      tags: [Admin - Produits]
+      summary: Mettre à jour les variantes (étape 3)
+      description: Au moins une variante couleur + taille est obligatoire.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [variants]
+              properties:
+                variants:
+                  type: array
+                  items:
+                    type: object
+                    required: [color_id, size_id, stock]
+                    properties:
+                      color_id:
+                        type: integer
+                      size_id:
+                        type: integer
+                      stock:
+                        type: integer
+                      price:
+                        type: number
+                      sku:
+                        type: string
+      responses:
+        '200':
+          description: Variantes mises à jour
+
+  /admin/colors:
+    get:
+      tags: [Admin - Couleurs & Tailles]
+      summary: Liste des couleurs
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Color'
+    post:
+      tags: [Admin - Couleurs & Tailles]
+      summary: Ajouter une couleur
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, hex_code]
+              properties:
+                name:
+                  type: string
+                hex_code:
+                  type: string
+                  example: "#000000"
+      responses:
+        '201':
+          description: Couleur créée
+
+  /admin/colors/{id}:
+    delete:
+      tags: [Admin - Couleurs & Tailles]
+      summary: Supprimer une couleur
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Couleur supprimée
+
+  /admin/sizes:
+    get:
+      tags: [Admin - Couleurs & Tailles]
+      summary: Liste des tailles
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Size'
+    post:
+      tags: [Admin - Couleurs & Tailles]
+      summary: Ajouter une taille
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                sort_order:
+                  type: integer
+      responses:
+        '201':
+          description: Taille créée
+
+  /admin/sizes/{id}:
+    delete:
+      tags: [Admin - Couleurs & Tailles]
+      summary: Supprimer une taille
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Taille supprimée
+
+  /admin/orders:
+    get:
+      tags: [Admin - Commandes]
+      summary: Liste des commandes
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [preorder]
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Liste paginée
+
+  /admin/orders/preorders:
+    get:
+      tags: [Admin - Commandes]
+      summary: Liste des précommandes
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Précommandes
+
+  /admin/orders/{id}:
+    get:
+      tags: [Admin - Commandes]
+      summary: Détail commande
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Order'
+
+  /admin/orders/{id}/status:
+    put:
+      tags: [Admin - Commandes]
+      summary: Changer le statut
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [pending, confirmed, preparing, shipped, delivered, cancelled, preorder_pending, preorder_confirmed]
+                note:
+                  type: string
+      responses:
+        '200':
+          description: Statut mis à jour
+
+  /admin/shipping-zones:
+    get:
+      tags: [Admin - Livraison]
+      summary: Liste des zones de livraison
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ShippingZone'
+    post:
+      tags: [Admin - Livraison]
+      summary: Créer une zone
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, price]
+              properties:
+                name:
+                  type: string
+                commune_id:
+                  type: integer
+                region_id:
+                  type: integer
+                price:
+                  type: number
+                delivery_days:
+                  type: integer
+      responses:
+        '201':
+          description: Zone créée
+
+  /admin/shipping-zones/{id}:
+    put:
+      tags: [Admin - Livraison]
+      summary: Modifier une zone
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Zone mise à jour
+
+  /admin/users:
+    get:
+      tags: [Admin - Utilisateurs]
+      summary: Liste des admins (super_admin)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Liste des comptes admin
+    post:
+      tags: [Admin - Utilisateurs]
+      summary: Créer un admin
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password, role]
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+                phone:
+                  type: string
+                role:
+                  type: string
+                  enum: [super_admin, admin, gestionnaire_stock, service_client]
+      responses:
+        '201':
+          description: Admin créé
+
+  /admin/users/{id}/role:
+    put:
+      tags: [Admin - Utilisateurs]
+      summary: Changer le rôle
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  type: string
+      responses:
+        '200':
+          description: Rôle mis à jour
+
+  /admin/users/{id}:
+    delete:
+      tags: [Admin - Utilisateurs]
+      summary: Désactiver un compte admin
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Compte désactivé
+
+  /admin/dashboard/stats:
+    get:
+      tags: [Admin - Dashboard]
+      summary: Statistiques clés
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: CA, commandes du jour, etc.
+
+  /admin/dashboard/orders-chart:
+    get:
+      tags: [Admin - Dashboard]
+      summary: Évolution commandes 30 jours
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Données graphique
+
+  /admin/dashboard/top-products:
+    get:
+      tags: [Admin - Dashboard]
+      summary: Produits les plus commandés
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Top produits
+
+  /admin/dashboard/stock-alerts:
+    get:
+      tags: [Admin - Dashboard]
+      summary: Alertes stock bas
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: threshold
+          in: query
+          schema:
+            type: integer
+            default: 5
+      responses:
+        '200':
+          description: Produits en stock faible
+
+  /admin/notification-templates/variables:
+    get:
+      tags: [Admin - Notifications]
+      summary: Variables disponibles pour les templates promotion
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Liste des placeholders {{variable}}
+
+  /admin/notification-templates:
+    get:
+      tags: [Admin - Notifications]
+      summary: Liste des templates de notification
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [promotion, newsletter, custom]
+        - name: is_active
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Templates paginés
+    post:
+      tags: [Admin - Notifications]
+      summary: Créer un template de notification
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, type, subject, body_html]
+              properties:
+                name:
+                  type: string
+                type:
+                  type: string
+                  enum: [promotion, newsletter, custom]
+                subject:
+                  type: string
+                  example: "🎉 {{promotion_title}} — {{shop_name}}"
+                body_html:
+                  type: string
+                  example: "<p>Bonjour {{customer_name}},</p><p>{{promotion_description}}</p><p>Code : <strong>{{promotion_code}}</strong></p><p><a href=\"{{cta_url}}\">Découvrir</a></p>"
+                is_active:
+                  type: boolean
+                  default: true
+      responses:
+        '201':
+          description: Template créé
+
+  /admin/notification-templates/{id}:
+    get:
+      tags: [Admin - Notifications]
+      summary: Détail d'un template
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Template
+    put:
+      tags: [Admin - Notifications]
+      summary: Modifier un template
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationTemplate'
+      responses:
+        '200':
+          description: Template mis à jour
+    delete:
+      tags: [Admin - Notifications]
+      summary: Supprimer un template
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Template supprimé
+
+  /admin/notification-campaigns/audience/preview:
+    post:
+      tags: [Admin - Notifications]
+      summary: Prévisualiser le nombre de destinataires
+      description: |
+        `all_clients` : e-mails uniques des clients ayant passé commande.
+        `custom_list` : liste d'e-mails fournie dans le body.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [audience_type]
+              properties:
+                audience_type:
+                  type: string
+                  enum: [all_clients, custom_list]
+                custom_emails:
+                  type: array
+                  items:
+                    type: string
+                    format: email
+      responses:
+        '200':
+          description: Nombre et échantillon de destinataires
+
+  /admin/notification-campaigns/preview:
+    post:
+      tags: [Admin - Notifications]
+      summary: Prévisualiser le rendu HTML d'une campagne
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notification_template_id:
+                  type: integer
+                subject:
+                  type: string
+                body_html:
+                  type: string
+                variables:
+                  type: object
+                customer_name:
+                  type: string
+                  example: Marie Kouassi
+      responses:
+        '200':
+          description: Sujet et corps rendus avec variables
+
+  /admin/notification-campaigns:
+    get:
+      tags: [Admin - Notifications]
+      summary: Liste des campagnes de notification
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, scheduled, processing, sent, failed, cancelled]
+      responses:
+        '200':
+          description: Campagnes paginées
+    post:
+      tags: [Admin - Notifications]
+      summary: Créer une campagne (brouillon, programmée ou envoi immédiat)
+      description: |
+        **Envoi immédiat** : `"send_now": true`
+        **Programmation** : `"scheduled_at": "2026-06-15T10:00:00+00:00"` (sans send_now)
+        **Brouillon** : ni send_now ni scheduled_at
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, audience_type]
+              properties:
+                name:
+                  type: string
+                  example: Soldes été 2026
+                notification_template_id:
+                  type: integer
+                subject:
+                  type: string
+                  description: Surcharge le sujet du template
+                body_html:
+                  type: string
+                  description: Surcharge le corps du template
+                audience_type:
+                  type: string
+                  enum: [all_clients, custom_list]
+                custom_emails:
+                  type: array
+                  items:
+                    type: string
+                    format: email
+                variables:
+                  type: object
+                  properties:
+                    promotion_title:
+                      type: string
+                    promotion_description:
+                      type: string
+                    promotion_code:
+                      type: string
+                    cta_url:
+                      type: string
+                      format: uri
+                scheduled_at:
+                  type: string
+                  format: date-time
+                send_now:
+                  type: boolean
+                  description: Envoyer immédiatement à la création
+      responses:
+        '201':
+          description: Campagne créée
+
+  /admin/notification-campaigns/{id}:
+    get:
+      tags: [Admin - Notifications]
+      summary: Détail d'une campagne (stats + logs récents)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Campagne
+    put:
+      tags: [Admin - Notifications]
+      summary: Modifier une campagne (brouillon ou programmée uniquement)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationCampaign'
+      responses:
+        '200':
+          description: Campagne mise à jour
+    delete:
+      tags: [Admin - Notifications]
+      summary: Annuler une campagne
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Campagne annulée
+
+  /admin/notification-campaigns/{id}/send:
+    post:
+      tags: [Admin - Notifications]
+      summary: Envoyer immédiatement une campagne
+      description: Lance l'envoi à l'instant T (brouillon ou programmée).
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Envoi lancé
+
+  /regions:
+    get:
+      tags: [Public - Géographie]
+      summary: Liste des régions Côte d'Ivoire
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Region'
+
+  /communes:
+    get:
+      tags: [Public - Géographie]
+      summary: Liste des communes
+      parameters:
+        - name: region
+          in: query
+          description: Filtrer par ID région
+          schema:
+            type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Commune'
+
+  /store/settings:
+    get:
+      tags: [Store - Boutique]
+      summary: Paramètres boutique (devises, langues, médias)
+      description: |
+        **À appeler au démarrage de l'app** (pattern standard e-commerce).
+        Retourne devises, taux de change, langues et limites médias (`media_limits`).
+        Le front stocke la devise choisie et convertit les prix XOF localement.
+      parameters:
+        - name: lang
+          in: query
+          schema:
+            type: string
+            enum: [fr, en]
+            default: fr
+      responses:
+        '200':
+          description: Devises XOF/USD/EUR et langues FR/EN
+
+  /store/categories:
+    get:
+      tags: [Store - Boutique]
+      summary: Arbre catégories public
+      parameters:
+        - $ref: '#/components/parameters/LangQuery'
+      responses:
+        '200':
+          description: Catégories actives
+
+  /store/products:
+    get:
+      tags: [Store - Boutique]
+      summary: Catalogue public (prix en XOF)
+      description: |
+        Retourne les prix en XOF uniquement. Le front convertit pour l'affichage
+        USD/EUR avec les taux de `GET /store/settings`.
+
+        **Images** : chaque produit inclut `images[]`. Pour la vignette de carte produit,
+        utiliser l'image avec `is_primary: true` et son champ `url`.
+      parameters:
+        - name: category_id
+          in: query
+          schema:
+            type: integer
+        - name: sub_category_id
+          in: query
+          schema:
+            type: integer
+        - name: color_id
+          in: query
+          schema:
+            type: integer
+        - name: size_id
+          in: query
+          schema:
+            type: integer
+        - name: min_price
+          in: query
+          schema:
+            type: number
+        - name: max_price
+          in: query
+          schema:
+            type: number
+        - name: featured
+          in: query
+          schema:
+            type: boolean
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [latest, price_asc, price_desc]
+      responses:
+        '200':
+          description: Catalogue paginé
+          content:
+            application/json:
+              example:
+                success: true
+                message: OK
+                data:
+                  current_page: 1
+                  per_page: 12
+                  total: 48
+                  data:
+                    - id: 1
+                      name: Robe soie noire
+                      slug: robe-soie-noire
+                      short_description: Robe longue en soie, coupe fluide
+                      price: 45000
+                      category_id: 2
+                      sub_category_id: 5
+                      status: available
+                      preorder_available_date: null
+                      is_featured: true
+                      images:
+                        - id: 12
+                          type: image
+                          path: products/1/a1b2c3d4-e5f6-7890-abcd-ef1234567890.webp
+                          url: https://api-dev.hakavod97.com/storage/products/1/a1b2c3d4-e5f6-7890-abcd-ef1234567890.webp
+                          sort_order: 0
+                          is_primary: true
+                        - id: 13
+                          type: image
+                          path: products/1/b2c3d4e5-f6a7-8901-bcde-f12345678901.webp
+                          url: https://api-dev.hakavod97.com/storage/products/1/b2c3d4e5-f6a7-8901-bcde-f12345678901.webp
+                          sort_order: 1
+                          is_primary: false
+                      video: null
+                      variants:
+                        - id: 1
+                          color_id: 3
+                          size_id: 2
+                          stock: 5
+                          price: null
+
+  /store/products/{id}:
+    get:
+      tags: [Store - Boutique]
+      summary: Fiche produit publique (prix en XOF)
+      description: |
+        Détail complet du produit. Galerie = `images` triées par `sort_order`.
+        Image hero / couverture = entrée avec `is_primary: true`. Vidéo dans `video`.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Détail produit, prix en XOF
+          content:
+            application/json:
+              example:
+                success: true
+                message: OK
+                data:
+                  id: 1
+                  name: Robe soie noire
+                  slug: robe-soie-noire
+                  short_description: Robe longue en soie, coupe fluide
+                  description: Robe élégante en soie naturelle, doublure satinée…
+                  price: 45000
+                  category_id: 2
+                  sub_category_id: 5
+                  status: available
+                  preorder_available_date: null
+                  is_featured: true
+                  images:
+                    - id: 12
+                      type: image
+                      path: products/1/a1b2c3d4-e5f6-7890-abcd-ef1234567890.webp
+                      url: https://api-dev.hakavod97.com/storage/products/1/a1b2c3d4-e5f6-7890-abcd-ef1234567890.webp
+                      sort_order: 0
+                      is_primary: true
+                    - id: 13
+                      type: image
+                      path: products/1/b2c3d4e5-f6a7-8901-bcde-f12345678901.webp
+                      url: https://api-dev.hakavod97.com/storage/products/1/b2c3d4e5-f6a7-8901-bcde-f12345678901.webp
+                      sort_order: 1
+                      is_primary: false
+                  video:
+                    id: 20
+                    type: video
+                    path: products/1/d4e5f6a7-b8c9-0123-def0-234567890123.mp4
+                    url: https://api-dev.hakavod97.com/storage/products/1/d4e5f6a7-b8c9-0123-def0-234567890123.mp4
+                    sort_order: 0
+                    is_primary: false
+                  variants:
+                    - id: 1
+                      color_id: 3
+                      size_id: 2
+                      stock: 5
+                      price: null
+                      color:
+                        id: 3
+                        name: Noir
+                        hex: "#000000"
+                      size:
+                        id: 2
+                        name: M
+
+  /store/checkout/preview:
+    post:
+      tags: [Store - Boutique]
+      summary: Récapitulatif checkout (devise choisie)
+      description: |
+        À appeler sur la page panier/checkout **avant** validation.
+        Affiche sous-total et total dans la devise choisie.
+        **La livraison est incluse dans les prix des articles** (`shipping_cost` vaut toujours 0).
+        Les montants XOF restent la référence pour le paiement réel.
+
+        **Mode panier serveur** : passer `use_cart: true` pour calculer le récap depuis le panier
+        (`GET /store/cart`) — pas besoin d'envoyer `items[]`. Auth identique au panier :
+        Bearer client ou `X-Guest-Token` invité.
+
+        **Mode manuel** : omettre `use_cart` et envoyer `items[]` (utile si panier 100 % côté front).
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/LangQuery'
+        - name: X-Guest-Token
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: "Panier invité (si use_cart est true, sans Bearer)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                use_cart:
+                  type: boolean
+                  description: |
+                    Si `true`, lit les articles du panier serveur. `items` devient inutile.
+                    Erreur 422 si le panier est vide.
+                items:
+                  type: array
+                  minItems: 1
+                  description: Requis si `use_cart` est absent ou `false`
+                  items:
+                    type: object
+                    required: [product_id, product_variant_id, quantity]
+                    properties:
+                      product_id:
+                        type: integer
+                      product_variant_id:
+                        type: integer
+                      quantity:
+                        type: integer
+                currency:
+                  type: string
+                  enum: [XOF, USD, EUR]
+                  default: XOF
+            examples:
+              depuis_panier:
+                summary: Depuis le panier serveur (recommandé)
+                value:
+                  use_cart: true
+                  currency: EUR
+              manuel:
+                summary: Articles envoyés manuellement
+                value:
+                  items:
+                    - product_id: 10
+                      product_variant_id: 55
+                      quantity: 1
+                  currency: XOF
+      responses:
+        '200':
+          description: Récap avec total_display dans la devise demandée
+        '422':
+          description: Panier vide (`use_cart`) ou articles invalides
+
+  /store/orders:
+    get:
+      tags: [Store - Client]
+      summary: Historique des commandes (client connecté)
+      description: |
+        Liste paginée des commandes du client authentifié.
+        Pour le suivi invité par référence, utiliser `GET /store/orders/{reference}` (public).
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CurrencyQuery'
+        - $ref: '#/components/parameters/LangQuery'
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Commandes paginées avec montants formatés
+        '401':
+          description: Non connecté
+    post:
+      tags: [Store - Boutique]
+      summary: Passer une commande
+      description: |
+        Enregistre la commande en **XOF** depuis le **panier serveur**.
+        **La livraison est incluse dans les prix** — ne pas envoyer de frais de livraison séparés.
+        Passer `currency` pour la réponse d'affichage dans la devise choisie.
+
+        **Invité** : `customer_name`, `customer_email`, `customer_phone` requis + header `X-Guest-Token`.
+        **Client connecté** : Bearer — coordonnées préremplies depuis le profil si omises.
+      security: []
+      parameters:
+        - name: X-Guest-Token
+          in: header
+          schema:
+            type: string
+            format: uuid
+          description: Panier invité (sans Bearer)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [customer_name, customer_email, customer_phone, shipping_address, commune_id]
+              properties:
+                customer_name:
+                  type: string
+                customer_email:
+                  type: string
+                customer_phone:
+                  type: string
+                shipping_address:
+                  type: string
+                commune_id:
+                  type: integer
+                notes:
+                  type: string
+                currency:
+                  type: string
+                  enum: [XOF, USD, EUR]
+                  description: Devise d'affichage de la confirmation
+                lang:
+                  type: string
+                  enum: [fr, en]
+      responses:
+        '201':
+          description: Commande créée avec total_display
+        '422':
+          description: Panier vide ou articles invalides
+
+  /store/orders/{reference}:
+    get:
+      tags: [Store - Boutique]
+      summary: Suivi commande par référence
+      parameters:
+        - $ref: '#/components/parameters/CurrencyQuery'
+        - $ref: '#/components/parameters/LangQuery'
+        - name: reference
+          in: path
+          required: true
+          schema:
+            type: string
+            example: CMD-AB12CD34
+      responses:
+        '200':
+          description: Statut commande (logistique). Pour le paiement, utiliser `/store/orders/{reference}/payments/status`.
+
+  /store/orders/{reference}/payments:
+    post:
+      tags: [Store - Boutique]
+      summary: Initier un paiement
+      description: |
+        Lance un paiement **mobile money** (Orange, Moov, MTN, Wave) ou **Visa** (bientôt — renvoie 422).
+
+        - Enregistre un paiement en base avec `status: PENDING`.
+        - Appelle le gateway AggregPay ; la réponse peut inclure `gateway_status` et `provider_link` (Wave).
+        - **Ne confirme pas** la commande : seul le webhook `POST /webhooks/aggregpay` passe la commande en `confirmed`.
+
+        **Mode test** (`PAYMENT_GATEWAY_TEST_MODE=true`) : débite `PAYMENT_GATEWAY_TEST_AMOUNT` XOF (défaut 200) au lieu du total commande.
+      security: []
+      parameters:
+        - name: reference
+          in: path
+          required: true
+          schema:
+            type: string
+            example: CMD-AB12CD34
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [payment_type]
+              properties:
+                payment_type:
+                  type: string
+                  enum: [mobile_money, visa]
+                operator:
+                  type: string
+                  enum: [orange, moov, mtn, wave]
+                  description: Requis si `payment_type=mobile_money`
+                phone_number:
+                  type: string
+                  description: Requis si `payment_type=mobile_money`
+                country:
+                  type: string
+                  example: CI
+                success_url:
+                  type: string
+                  format: uri
+                  description: Requis pour Wave et Visa (redirect)
+                cancel_url:
+                  type: string
+                  format: uri
+                  description: Requis pour Wave et Visa (redirect)
+            examples:
+              orange:
+                summary: Mobile money — Orange
+                value:
+                  payment_type: mobile_money
+                  operator: orange
+                  phone_number: "0758942495"
+                  country: CI
+              wave:
+                summary: Mobile money — Wave (redirect)
+                value:
+                  payment_type: mobile_money
+                  operator: wave
+                  phone_number: "0758942495"
+                  success_url: https://boutique.example.com/paiement/succes
+                  cancel_url: https://boutique.example.com/paiement/annule
+      responses:
+        '201':
+          description: Paiement initié
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Payment'
+        '422':
+          description: Commande non payable, Visa indisponible ou erreur gateway
+
+  /store/orders/{reference}/payments/status:
+    get:
+      tags: [Store - Boutique]
+      summary: Statut paiement (polling front)
+      description: |
+        **Lecture seule pour le front** — n'écrit **pas** en base.
+
+        Interroge le gateway si le paiement n'est pas final en base, et renvoie :
+        - `status` : statut persisté (mis à jour par le webhook)
+        - `gateway_status` : statut live opérateur (UX « en attente de validation »)
+
+        Poller toutes les 3–5 s jusqu'à `status=SUCCESS` ou `FAILED`.
+      security: []
+      parameters:
+        - name: reference
+          in: path
+          required: true
+          schema:
+            type: string
+            example: CMD-AB12CD34
+      responses:
+        '200':
+          description: Statut paiement
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Payment'
+        '404':
+          description: Commande ou paiement introuvable
+        '502':
+          description: Gateway indisponible
+
+  /webhooks/aggregpay:
+    post:
+      tags: [Webhooks]
+      summary: Webhook AggregPay (paiement confirmé / échoué)
+      description: |
+        Appelé par **payment.czotick.com** après validation du paiement mobile money.
+
+        **Seul mécanisme** qui met à jour la base :
+        - `SUCCESS` → paiement `success`, commande `confirmed` (ou `preorder_confirmed`)
+        - `FAILED` / `CANCELLED` → paiement `failed`, commande `cancelled`, restitution du stock
+
+        Header requis si configuré : `X-Gateway-Signature` (HMAC SHA256 du body avec `PAYMENT_GATEWAY_WEBHOOK_SECRET`).
+
+        URL à enregistrer côté gateway : `https://votre-api.com/api/webhooks/aggregpay`
+      security: []
+      parameters:
+        - name: X-Gateway-Signature
+          in: header
+          required: false
+          schema:
+            type: string
+          description: HMAC SHA256 du corps JSON brut
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [order_id, status]
+              properties:
+                order_id:
+                  type: string
+                  description: Référence gateway (`PAY-…`)
+                  example: PAY-AB12CD34EF
+                event:
+                  type: string
+                  example: payment.succeeded
+                status:
+                  type: string
+                  enum: [PENDING, SUCCESS, FAILED, CANCELLED]
+                amount:
+                  type: integer
+                message:
+                  type: string
+                metadata:
+                  type: object
+                  properties:
+                    order_reference:
+                      type: string
+                    order_id:
+                      type: integer
+            example:
+              order_id: PAY-AB12CD34EF
+              event: payment.succeeded
+              status: SUCCESS
+              amount: 200
+      responses:
+        '200':
+          description: Webhook reçu
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received:
+                    type: boolean
+                    example: true
+        '401':
+          description: Signature HMAC invalide
+        '400':
+          description: Corps JSON invalide
+
+  /store/countries:
+    get:
+      tags: [Store - Client]
+      summary: Pays supportés et méthodes d'inscription
+      responses:
+        '200':
+          description: Liste des pays avec auth_methods (phone, email, google, facebook)
+
+  /store/shipping-zones:
+    get:
+      tags: [Store - Boutique]
+      summary: Zones de livraison actives (public)
+      description: |
+        Liste des zones configurées en admin. **Non utilisé au checkout** :
+        les frais de livraison sont inclus dans le prix des articles.
+      parameters:
+        - name: commune_id
+          in: query
+          schema:
+            type: integer
+        - name: region_id
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Zones de livraison
+
+  /store/auth/register/phone:
+    post:
+      tags: [Store - Client]
+      summary: Inscription par téléphone — étape 1 (OTP SMS)
+      description: |
+        Envoie un code SMS pour **vérifier le numéro** lors de la création du compte.
+        Étape 2 : `POST /store/auth/otp/verify` avec le code + mot de passe.
+        La connexion ultérieure se fait via `POST /store/auth/login/phone` (sans SMS).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [country, phone, name]
+              properties:
+                country:
+                  type: string
+                  example: CI
+                phone:
+                  type: string
+                  example: "+2250700000000"
+                name:
+                  type: string
+      responses:
+        '200':
+          description: OTP envoyé
+
+  /store/auth/login/phone:
+    post:
+      tags: [Store - Client]
+      summary: Connexion par téléphone et mot de passe
+      description: |
+        Connexion directe **sans SMS** — le OTP n'est utilisé qu'à l'inscription.
+        Comptes créés avant cette évolution sans mot de passe doivent en définir un
+        via le support ou une réinitialisation (à prévoir côté produit).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [country, phone, password]
+              properties:
+                country:
+                  type: string
+                  example: CI
+                phone:
+                  type: string
+                  example: "+2250700000000"
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Token Sanctum client
+        '422':
+          description: Identifiants invalides
+
+  /store/auth/otp/verify:
+    post:
+      tags: [Store - Client]
+      summary: Inscription par téléphone — étape 2 (OTP + mot de passe)
+      description: |
+        Valide le code SMS et crée le compte avec un mot de passe.
+        Réservé à l'**inscription** — si le numéro existe déjà, utiliser `login/phone`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [country, phone, code, password, password_confirmation]
+              properties:
+                country:
+                  type: string
+                phone:
+                  type: string
+                code:
+                  type: string
+                  example: "123456"
+                password:
+                  type: string
+                  minLength: 8
+                password_confirmation:
+                  type: string
+      responses:
+        '201':
+          description: Compte créé avec token
+        '422':
+          description: Code invalide ou numéro déjà inscrit
+
+  /store/auth/otp/resend:
+    post:
+      tags: [Store - Client]
+      summary: Renvoyer le code OTP SMS (inscription uniquement)
+      description: |
+        Uniquement pendant l'**inscription** (numéro pas encore enregistré).
+        Cooldown 60 s entre envois. En dev, le code est dans `storage/logs/laravel.log`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [country, phone]
+              properties:
+                country:
+                  type: string
+                  example: CI
+                phone:
+                  type: string
+                  example: "+2250700000000"
+                name:
+                  type: string
+                  description: Optionnel — utilisé si création de compte en cours
+      responses:
+        '200':
+          description: OTP renvoyé
+        '429':
+          description: Cooldown actif (`retry_after` en secondes)
+
+  /store/auth/register:
+    post:
+      tags: [Store - Client]
+      summary: Inscription par e-mail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [country, name, email, password, password_confirmation]
+              properties:
+                country:
+                  type: string
+                name:
+                  type: string
+                email:
+                  type: string
+                password:
+                  type: string
+                password_confirmation:
+                  type: string
+      responses:
+        '201':
+          description: Compte créé avec token
+
+  /store/auth/login:
+    post:
+      tags: [Store - Client]
+      summary: Connexion par e-mail
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Token Sanctum client
+
+  /store/auth/forgot-password:
+    post:
+      tags: [Store - Client]
+      summary: Mot de passe oublié (e-mail)
+      description: |
+        Envoie un lien de réinitialisation si un compte **client** existe avec cet e-mail.
+        Réponse identique que le compte existe ou non (sécurité).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: E-mail envoyé si compte éligible
+
+  /store/auth/reset-password:
+    post:
+      tags: [Store - Client]
+      summary: Réinitialiser le mot de passe
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, token, password, password_confirmation]
+              properties:
+                email:
+                  type: string
+                  format: email
+                token:
+                  type: string
+                  description: Token reçu par e-mail
+                password:
+                  type: string
+                  minLength: 8
+                password_confirmation:
+                  type: string
+      responses:
+        '200':
+          description: Mot de passe réinitialisé
+        '422':
+          description: Token invalide ou expiré
+
+  /store/auth/social/google:
+    post:
+      tags: [Store - Client]
+      summary: Connexion / inscription Google
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [country, access_token]
+              properties:
+                country:
+                  type: string
+                access_token:
+                  type: string
+      responses:
+        '200':
+          description: Token Sanctum client
+
+  /store/auth/social/facebook:
+    post:
+      tags: [Store - Client]
+      summary: Connexion / inscription Facebook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [country, access_token]
+              properties:
+                country:
+                  type: string
+                access_token:
+                  type: string
+      responses:
+        '200':
+          description: Token Sanctum client
+
+  /store/auth/me:
+    get:
+      tags: [Store - Client]
+      summary: Profil client connecté
+      description: |
+        Retourne le profil du client authentifié avec compteurs (`orders_count`, `favorites_count`)
+        et comptes sociaux liés (`social_accounts`).
+        Pour modifier le profil : `PUT /store/profile`.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profil avec compteurs commandes et favoris
+          content:
+            application/json:
+              example:
+                success: true
+                message: OK
+                data:
+                  id: 3
+                  name: Marie Kouassi
+                  email: marie@example.com
+                  phone: "+2250700000000"
+                  country: CI
+                  auth_provider: email
+                  phone_verified_at: null
+                  email_verified_at: "2026-06-15T10:00:00.000000Z"
+                  orders_count: 2
+                  favorites_count: 5
+                  social_accounts: []
+        '401':
+          description: Non connecté
+        '403':
+          description: Token invalide ou compte non client
+
+  /store/auth/logout:
+    post:
+      tags: [Store - Client]
+      summary: Déconnexion
+      description: Révoque le token Bearer courant. Corps vide.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Déconnexion réussie
+
+  /store/auth/password:
+    put:
+      tags: [Store - Client]
+      summary: Changer le mot de passe
+      description: Réservé aux comptes avec mot de passe (e-mail ou téléphone). Pas pour connexion social seule.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, password, password_confirmation]
+              properties:
+                current_password:
+                  type: string
+                password:
+                  type: string
+                  minLength: 8
+                password_confirmation:
+                  type: string
+      responses:
+        '200':
+          description: Mot de passe mis à jour
+        '422':
+          description: Mot de passe actuel incorrect ou compte sans mot de passe
+
+  /store/auth/account:
+    delete:
+      tags: [Store - Client]
+      summary: Désactiver le compte client
+      description: "Révoque tous les tokens et désactive le compte (is_active false). Corps vide."
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Compte désactivé
+
+  /store/profile:
+    put:
+      tags: [Store - Client]
+      summary: Mettre à jour le profil
+      description: |
+        Au moins un contact (e-mail ou téléphone) doit rester renseigné après modification.
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                  nullable: true
+                phone:
+                  type: string
+                  nullable: true
+                country:
+                  type: string
+                  description: Code ISO 2 lettres (ex. CI)
+                  example: CI
+      responses:
+        '200':
+          description: Profil mis à jour
+
+  /store/cart:
+    get:
+      tags: [Store - Client]
+      summary: Contenu du panier (guest ou connecté)
+      description: |
+        **Invité** : pas de Bearer. Conserver `guest_token` de la réponse (ou l'en-tête `X-Guest-Token`)
+        et le renvoyer sur les requêtes suivantes.
+
+        **Client connecté** : envoyer `Authorization: Bearer {token}` (token boutique, pas admin).
+        Le panier est lié au `user_id` ; `guest_token` vaut `null` dans la réponse.
+        Après connexion, fusionner l'ancien panier invité via `POST /store/cart/merge` + `X-Guest-Token`.
+      security: []
+      parameters:
+        - name: X-Guest-Token
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Token panier invité (ignoré si Bearer client valide)
+      responses:
+        '200':
+          description: Panier
+    delete:
+      tags: [Store - Client]
+      summary: Vider le panier
+      description: Supprime tous les articles. Même auth que `GET /store/cart`.
+      security: []
+      parameters:
+        - name: X-Guest-Token
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Panier vidé
+
+  /store/cart/items:
+    post:
+      tags: [Store - Client]
+      summary: Ajouter au panier
+      description: |
+        Même logique d'auth que `GET /store/cart` : Bearer client optionnel, ou mode invité avec `X-Guest-Token`.
+      security: []
+      parameters:
+        - name: X-Guest-Token
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [product_id, product_variant_id, quantity]
+              properties:
+                product_id:
+                  type: integer
+                product_variant_id:
+                  type: integer
+                quantity:
+                  type: integer
+      responses:
+        '201':
+          description: Article ajouté
+
+  /store/cart/items/{cartItemId}:
+    put:
+      tags: [Store - Client]
+      summary: Modifier la quantité d'un article
+      description: Même auth que `GET /store/cart`.
+      security: []
+      parameters:
+        - name: cartItemId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: X-Guest-Token
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quantity]
+              properties:
+                quantity:
+                  type: integer
+                  minimum: 1
+      responses:
+        '200':
+          description: Panier mis à jour
+        '404':
+          description: Article introuvable dans ce panier
+    delete:
+      tags: [Store - Client]
+      summary: Retirer un article du panier
+      description: Même auth que `GET /store/cart`.
+      security: []
+      parameters:
+        - name: cartItemId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: X-Guest-Token
+          in: header
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Article retiré
+        '404':
+          description: Article introuvable dans ce panier
+
+  /store/cart/merge:
+    post:
+      tags: [Store - Client]
+      summary: Fusionner le panier invité après connexion
+      description: |
+        À appeler juste après login/inscription avec le `X-Guest-Token` stocké côté front.
+        Fusionne les quantités par variante dans le panier du compte connecté.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: X-Guest-Token
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Panier fusionné (ou rien à fusionner si token inconnu)
+        '422':
+          description: En-tête X-Guest-Token manquant
+        '401':
+          description: Non connecté
+
+  /store/favorites:
+    get:
+      tags: [Store - Client]
+      summary: Liste des favoris (paginée)
+      description: |
+        Retourne les favoris du client connecté, avec le **produit** associé (`images`, `category`).
+        Granularité **produit** uniquement — pas de variante (couleur/taille) mémorisée.
+        Pour cocher les cœurs sur le catalogue, préférer `GET /store/favorites/ids`.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 12
+      responses:
+        '200':
+          description: Favoris paginés
+          content:
+            application/json:
+              example:
+                success: true
+                message: OK
+                data:
+                  current_page: 1
+                  per_page: 12
+                  total: 2
+                  data:
+                    - id: 5
+                      user_id: 3
+                      product_id: 10
+                      created_at: "2026-06-17T12:00:00.000000Z"
+                      updated_at: "2026-06-17T12:00:00.000000Z"
+                      product:
+                        id: 10
+                        name: Tricot
+                        slug: tricot-Nf3P
+                        price: "3000.00"
+                        status: available
+                        images:
+                          - id: 35
+                            type: image
+                            url: https://api-dev.hakavod97.com/storage/products/10/19e9d23c-c059-405e-bb71-81433906ff65.webp
+                            sort_order: 0
+                            is_primary: true
+        '401':
+          description: Non connecté
+        '403':
+          description: Token invalide ou compte non client
+
+  /store/favorites/ids:
+    get:
+      tags: [Store - Client]
+      summary: IDs des produits favoris
+      description: |
+        Liste légère des `product_id` en favori — utile pour marquer les cœurs sur le catalogue
+        sans charger toute la fiche produit.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: IDs produits favoris
+          content:
+            application/json:
+              example:
+                success: true
+                message: OK
+                data:
+                  product_ids: [10, 14, 22]
+        '401':
+          description: Non connecté
+
+  /store/favorites/{productId}:
+    post:
+      tags: [Store - Client]
+      summary: Ajouter un produit aux favoris
+      description: |
+        Ajoute le produit aux favoris du client (`firstOrCreate` — idempotent si déjà en favori).
+        Produit requis en statut `available` ou `preorder`.
+        Corps de requête vide.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: Ajouté aux favoris
+          content:
+            application/json:
+              example:
+                success: true
+                message: Ajouté aux favoris
+                data: null
+        '404':
+          description: Produit introuvable ou non disponible (draft, out_of_stock)
+        '401':
+          description: Non connecté
+    delete:
+      tags: [Store - Client]
+      summary: Retirer un produit des favoris
+      description: |
+        Retire le produit des favoris. Silencieux si le produit n'était pas en favori.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Retiré des favoris
+          content:
+            application/json:
+              example:
+                success: true
+                message: Retiré des favoris
+                data: null
+        '401':
+          description: Non connecté
+
+  /store/addresses:
+    get:
+      tags: [Store - Client]
+      summary: Adresses de livraison du client
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Liste des adresses (défaut en premier)
+    post:
+      tags: [Store - Client]
+      summary: Ajouter une adresse
+      description: La première adresse devient automatiquement par défaut.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [customer_name, customer_phone, shipping_address]
+              properties:
+                label:
+                  type: string
+                  maxLength: 100
+                  example: Maison
+                customer_name:
+                  type: string
+                customer_phone:
+                  type: string
+                shipping_address:
+                  type: string
+                commune_id:
+                  type: integer
+                  nullable: true
+                is_default:
+                  type: boolean
+                  default: false
+      responses:
+        '201':
+          description: Adresse créée
+
+  /store/addresses/{addressId}:
+    put:
+      tags: [Store - Client]
+      summary: Modifier une adresse
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: addressId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label:
+                  type: string
+                customer_name:
+                  type: string
+                customer_phone:
+                  type: string
+                shipping_address:
+                  type: string
+                commune_id:
+                  type: integer
+                  nullable: true
+                is_default:
+                  type: boolean
+      responses:
+        '200':
+          description: Adresse mise à jour
+        '404':
+          description: Adresse introuvable
+    delete:
+      tags: [Store - Client]
+      summary: Supprimer une adresse
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: addressId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Adresse supprimée
+        '404':
+          description: Adresse introuvable
+
+  /store/addresses/{addressId}/default:
+    put:
+      tags: [Store - Client]
+      summary: Définir l'adresse par défaut
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: addressId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Adresse par défaut définie
+        '404':
+          description: Adresse introuvable
