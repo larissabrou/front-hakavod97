@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { CheckCircle, XCircle, MapPin, Globe, Check, Building2 } from 'lucide-react';
 import { useCart } from '../../hooks/useCart';
 import { useSettings } from '../../hooks/useSettings';
+import { useCustomerAuth } from '../../hooks/useCustomerAuth';
+import customerService from '../../services/api/customerService';
 import geoService from '../../services/api/geoService';
 import checkoutService from '../../services/api/checkoutService';
 import Input from '../../components/ui/Input';
@@ -346,6 +348,7 @@ const CONTENT = {
 export const Checkout = () => {
   const { cartItems, getCartSubtotal, clearCart } = useCart();
   const { formatPrice, activeCurrency, activeLocale, t } = useSettings();
+  const { isAuthenticated } = useCustomerAuth();
   const navigate = useNavigate();
 
   const locale = activeLocale === 'en' || activeLocale === 'eng' ? 'en' : 'fr';
@@ -375,6 +378,8 @@ export const Checkout = () => {
   const [isMobileValidating, setIsMobileValidating] = useState(false);
   const [paymentPhone, setPaymentPhone] = useState('');
   const [paymentPhoneDirty, setPaymentPhoneDirty] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState('');
 
   // Card payment form states
   const [cardName, setCardName] = useState('');
@@ -499,6 +504,58 @@ export const Checkout = () => {
     };
     loadCommunes();
   }, [selectedRegion]);
+
+  // Helper to prefill address
+  const prefillFormWithAddress = async (addr) => {
+    if (!addr) return;
+    
+    const nameParts = (addr.customer_name || '').trim().split(/\s+/);
+    const firstname = nameParts[0] || '';
+    const lastname = nameParts.slice(1).join(' ') || '';
+    
+    setFormData(prev => ({
+      ...prev,
+      firstname,
+      lastname,
+      address: addr.shipping_address || '',
+      phone: addr.customer_phone || '',
+    }));
+    
+    if (addr.commune_id) {
+      try {
+        const comRes = await geoService.getCommunes();
+        const allComs = comRes.data || comRes || [];
+        const matchingCom = allComs.find(c => c.id === Number(addr.commune_id));
+        if (matchingCom && matchingCom.region_id) {
+          setSelectedRegion(String(matchingCom.region_id));
+          setSelectedCommune(String(addr.commune_id));
+        }
+      } catch (e) {
+        console.warn("Failed to resolve commune region on prefill:", e);
+      }
+    }
+  };
+
+  // Load saved addresses for logged-in clients
+  useEffect(() => {
+    if (isAuthenticated) {
+      const loadAddresses = async () => {
+        try {
+          const res = await customerService.getAddresses();
+          const list = res?.data || res || [];
+          setSavedAddresses(list);
+          if (list.length > 0) {
+            const defAddr = list.find(a => a.is_default) || list[0];
+            setSelectedAddressId(defAddr.id);
+            prefillFormWithAddress(defAddr);
+          }
+        } catch (err) {
+          console.warn("Failed to load customer addresses:", err);
+        }
+      };
+      loadAddresses();
+    }
+  }, [isAuthenticated]);
 
   // Dynamic preview call
   useEffect(() => {
@@ -708,6 +765,44 @@ export const Checkout = () => {
       const errorMessage = res?.message || res?.data?.message || res?.data?.data?.message;
 
       if (orderResult?.reference) {
+        // Save customer address as default on success
+        if (isAuthenticated) {
+          try {
+            const addressText = formData.address.trim().toLowerCase();
+            const phoneText = formData.phone.trim();
+            const nameText = `${formData.firstname} ${formData.lastname}`.trim().toLowerCase();
+
+            const alreadyExists = savedAddresses.some(a => 
+              (a.shipping_address || '').trim().toLowerCase() === addressText &&
+              (a.customer_phone || '').trim() === phoneText &&
+              (a.customer_name || '').trim().toLowerCase() === nameText &&
+              String(a.commune_id) === String(selectedCommune)
+            );
+
+            if (!alreadyExists) {
+              customerService.addAddress({
+                label: `Checkout ${new Date().toLocaleDateString()}`,
+                customer_name: `${formData.firstname} ${formData.lastname}`,
+                customer_phone: formData.phone,
+                shipping_address: formData.address,
+                commune_id: selectedCommune ? Number(selectedCommune) : null,
+                is_default: true
+              }).catch(err => console.warn("Failed to save new address:", err));
+            } else {
+              const matched = savedAddresses.find(a => 
+                (a.shipping_address || '').trim().toLowerCase() === addressText &&
+                (a.customer_phone || '').trim() === phoneText &&
+                (a.customer_name || '').trim().toLowerCase() === nameText &&
+                String(a.commune_id) === String(selectedCommune)
+              );
+              if (matched && !matched.is_default) {
+                customerService.setDefaultAddress(matched.id).catch(err => console.warn("Failed to set address default:", err));
+              }
+            }
+          } catch (addrErr) {
+            console.warn("Failed to automatically save address as default:", addrErr);
+          }
+        }
         const reference = orderResult.reference;
         setCreatedOrderRef(reference);
 
@@ -873,6 +968,47 @@ export const Checkout = () => {
               {c.shipping_address_ci}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Vos adresses enregistrées */}
+              {isAuthenticated && savedAddresses.length > 0 && (
+                <div className="md:col-span-2 flex flex-col gap-1.5 text-left mb-2">
+                  <label className="text-[10px] font-bold text-neutral-600 uppercase tracking-widest">
+                    Vos adresses enregistrées
+                  </label>
+                  <select
+                    value={selectedAddressId}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      setSelectedAddressId(id);
+                      if (id === 'new') {
+                        setFormData(prev => ({
+                          ...prev,
+                          firstname: '',
+                          lastname: '',
+                          address: '',
+                          phone: '',
+                        }));
+                        setSelectedRegion('');
+                        setSelectedCommune('');
+                      } else {
+                        const selected = savedAddresses.find(a => String(a.id) === String(id));
+                        if (selected) {
+                          prefillFormWithAddress(selected);
+                        }
+                      }
+                    }}
+                    className="w-full border border-neutral-200 rounded-none py-2 px-3 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-primary h-11 select-no-arrow"
+                  >
+                    {savedAddresses.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.is_default ? '🏠 [Adresse par défaut] ' : '📍 '}
+                        {a.customer_name} - {a.shipping_address} ({a.customer_phone})
+                      </option>
+                    ))}
+                    <option value="new">➕ Saisir une autre adresse...</option>
+                  </select>
+                </div>
+              )}
+
               <Input label={c.firstname} name="firstname" value={formData.firstname} onChange={handleInputChange} required />
               <Input label={c.lastname} name="lastname" value={formData.lastname} onChange={handleInputChange} required />
               <Input label={c.email} type="email" name="email" value={formData.email} onChange={handleInputChange} className="md:col-span-2" required />
