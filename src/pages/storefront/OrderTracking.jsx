@@ -348,6 +348,7 @@ export const OrderTracking = () => {
   const [isPolling, setIsPolling] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentAlert, setPaymentAlert] = useState(null);
+  const [localPaymentSuccess, setLocalPaymentSuccess] = useState(false);
 
   // Charger la liste des produits pour le mappage des images correctes
   useEffect(() => {
@@ -511,6 +512,7 @@ export const OrderTracking = () => {
     const paymentParam = new URLSearchParams(window.location.search).get('payment');
     if (paymentParam === 'success') {
       setSuccess(c.success_payment);
+      setLocalPaymentSuccess(true);
     } else if (paymentParam === 'cancel') {
       setError(c.cancel_payment_error);
       if (reference) {
@@ -520,6 +522,28 @@ export const OrderTracking = () => {
       }
     }
   }, [reference]);
+
+  // Vérifier en arrière-plan si le paiement est déjà un succès pour by-passer les erreurs de webhook
+  useEffect(() => {
+    if (order?.reference && (order.status === 'pending' || order.status === 'preorder_pending')) {
+      const checkPaymentOnInit = async () => {
+        try {
+          const res = await checkoutService.getPaymentStatus(order.reference);
+          const status = res?.status || res?.data?.status;
+          console.log("Initial check: order payment status is", status);
+          if (status === 'SUCCESS') {
+            setLocalPaymentSuccess(true);
+            setSuccess(c.success_payment);
+          }
+        } catch (err) {
+          console.warn("Failed to check payment status on load:", err);
+        }
+      };
+      checkPaymentOnInit();
+    } else {
+      setLocalPaymentSuccess(false);
+    }
+  }, [order?.reference, order?.status]);
 
   // Polling du statut du paiement
   useEffect(() => {
@@ -719,6 +743,10 @@ export const OrderTracking = () => {
     return { allowed: true, reason: '' };
   };
 
+  const displayStatus = (order?.status === 'pending' || order?.status === 'preorder_pending') && localPaymentSuccess
+    ? 'confirmed'
+    : order?.status;
+
   // Get current status step index
   const getStatusIndex = (status) => {
     if (status === 'cancelled') return -1;
@@ -727,7 +755,7 @@ export const OrderTracking = () => {
     return STATUS_STEPS.findIndex(step => step.key === status);
   };
 
-  const currentStepIndex = getStatusIndex(order?.status);
+  const currentStepIndex = getStatusIndex(displayStatus);
 
   return (
     <div className="max-w-4xl mx-auto w-full px-4 md:px-8 py-6 md:py-10">
@@ -884,7 +912,7 @@ export const OrderTracking = () => {
 
           {/* STATUS TRACKER BAR */}
           <div className="bg-white p-6 border border-neutral-100 rounded-b-sm shadow-xs">
-            {order.status === 'cancelled' ? (
+            {displayStatus === 'cancelled' ? (
               <div className="flex items-center gap-3 text-red-600 bg-red-50 border border-red-100 p-4 rounded-sm">
                 <XCircle className="w-6 h-6" />
                 <div>
@@ -940,7 +968,7 @@ export const OrderTracking = () => {
           </div>
 
           {/* WIDGET DE PAIEMENT MOBILE MONEY (si commande en attente de paiement) */}
-          {(order.status === 'pending' || order.status === 'preorder_pending') && (
+          {(displayStatus === 'pending' || displayStatus === 'preorder_pending') && (
             <div className="bg-white p-6 border border-neutral-100 rounded-sm shadow-xs mb-6 text-left border-l-4 border-l-accent animate-fade-in">
               <div className="flex items-start gap-4 mb-4">
                 <div className="p-2.5 bg-neutral-900 text-accent rounded-none">
