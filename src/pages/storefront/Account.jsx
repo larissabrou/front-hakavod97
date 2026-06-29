@@ -4,10 +4,11 @@ import { useCustomerAuth } from '../../hooks/useCustomerAuth';
 import customerService from '../../services/api/customerService';
 import { useFavorites } from '../../hooks/useFavorites';
 import { useCart } from '../../hooks/useCart';
-import { User, MapPin, ShoppingBag, Heart, LogOut, Loader2, Save, ShoppingCart, Trash2, ShieldCheck, Compass, CheckCircle2, ShieldAlert, ChevronDown, ChevronUp, FileText } from 'lucide-react';
+import { User, MapPin, ShoppingBag, Heart, LogOut, Loader2, Save, ShoppingCart, Trash2, ShieldCheck, Compass, CheckCircle2, ShieldAlert, ChevronDown, ChevronUp, FileText, Check, Globe, Building2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../../hooks/useSettings';
 import QuickAddModal from '../../components/product/QuickAddModal';
+import geoService from '../../services/api/geoService';
 
 const CONTENT = {
   fr: {
@@ -299,6 +300,7 @@ const Account = () => {
 
   const [activeTab, setActiveTab] = useState('dashboard'); // 'dashboard' | 'profile' | 'orders' | 'addresses' | 'favorites'
   const [addresses, setAddresses] = useState([]);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [activeQuickAddProduct, setActiveQuickAddProduct] = useState(null);
 
   // États pour la connexion / inscription pro
@@ -593,12 +595,48 @@ const Account = () => {
     customer_name: '',
     customer_phone: '',
     address: '',
-    city: 'Abidjan',
-    postalCode: '',
-    country: "Côte d'Ivoire",
     label: ''
   });
+  const [deliveryCountry, setDeliveryCountry] = useState('CI');
+  const [regions, setRegions] = useState([]);
+  const [selectedRegion, setSelectedRegion] = useState('');
+  const [communes, setCommunes] = useState([]);
+  const [selectedCommune, setSelectedCommune] = useState('');
   const [addressLoading, setAddressLoading] = useState(false);
+
+  // Charger les régions uniquement à l'ouverture de la modale
+  useEffect(() => {
+    if (!isAddressModalOpen) return;
+    if (regions.length > 0) return; // déjà chargées
+    const loadRegions = async () => {
+      try {
+        const res = await geoService.getRegions();
+        setRegions(Array.isArray(res) ? res : (res?.data || []));
+      } catch (err) {
+        console.error("Erreur chargement regions", err);
+      }
+    };
+    loadRegions();
+  }, [isAddressModalOpen]);
+
+  // Charger les communes lorsque la région change
+  useEffect(() => {
+    if (!selectedRegion) {
+      setCommunes([]);
+      setSelectedCommune('');
+      return;
+    }
+    const loadCommunes = async () => {
+      try {
+        const res = await geoService.getCommunes(selectedRegion);
+        setCommunes(Array.isArray(res) ? res : (res?.data || []));
+        setSelectedCommune('');
+      } catch (err) {
+        console.error("Erreur chargement communes", err);
+      }
+    };
+    loadCommunes();
+  }, [selectedRegion]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -769,16 +807,25 @@ const Account = () => {
     setAddressLoading(true);
     setError('');
     try {
-      const fullShippingAddress = [
-        newAddress.address.trim(),
-        newAddress.postalCode.trim() ? newAddress.postalCode.trim() + ' ' + newAddress.city.trim() : newAddress.city.trim(),
-        newAddress.country.trim()
-      ].filter(Boolean).join(', ');
+      const activeRegionObj = regions.find(r => String(r.id) === String(selectedRegion));
+      const activeCommuneObj = communes.find(c => String(c.id) === String(selectedCommune));
+      const regionName = activeRegionObj ? activeRegionObj.name : '';
+      const communeName = activeCommuneObj ? activeCommuneObj.name : '';
+
+      if (deliveryCountry === 'CI' && (!selectedRegion || !selectedCommune)) {
+        setError(locale === 'en' ? 'Please select a region and commune.' : 'Veuillez sélectionner une région et une commune.');
+        setAddressLoading(false);
+        return;
+      }
 
       const newAddrObj = { 
         customer_name: newAddress.customer_name || customerUser?.name || 'Client',
         customer_phone: newAddress.customer_phone || customerUser?.phone || '',
-        shipping_address: fullShippingAddress,
+        shipping_address: newAddress.address.trim(),
+        country: deliveryCountry,
+        region: deliveryCountry === 'CI' ? regionName : '',
+        commune: deliveryCountry === 'CI' ? communeName : '',
+        commune_id: deliveryCountry === 'CI' ? (selectedCommune ? Number(selectedCommune) : null) : null,
         label: newAddress.label || c.default_address_label,
         is_default: addresses.length === 0
       };
@@ -790,11 +837,12 @@ const Account = () => {
         customer_name: customerUser?.name || '', 
         customer_phone: customerUser?.phone || '', 
         address: '', 
-        city: 'Abidjan', 
-        postalCode: '', 
-        country: "Côte d'Ivoire",
         label: ''
       });
+      setDeliveryCountry('CI');
+      setSelectedRegion('');
+      setSelectedCommune('');
+      setIsAddressModalOpen(false);
       setSuccess(c.address_add_success);
       setTimeout(() => setSuccess(''), 3500);
     } catch (err) {
@@ -1438,11 +1486,11 @@ const Account = () => {
                   onClick={() => setActiveTab('dashboard')}
                   className={`w-auto lg:w-full flex items-center gap-2 lg:gap-3 py-2.5 lg:py-3 px-3 lg:px-4 text-[10px] lg:text-xs font-bold uppercase tracking-wider transition-all text-left rounded-lg shrink-0 snap-start whitespace-nowrap ${
                     activeTab === 'dashboard' 
-                      ? 'bg-neutral-100 text-neutral-900 font-semibold shadow-2xs' 
-                      : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50/60'
+                      ? 'bg-primary text-white font-extrabold shadow-sm' 
+                      : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
                   }`}
                 >
-                  <Compass className={`w-4 h-4 transition-colors ${activeTab === 'dashboard' ? 'text-primary' : 'text-neutral-400'}`} />
+                  <Compass className={`w-4 h-4 transition-colors ${activeTab === 'dashboard' ? 'text-white' : 'text-neutral-400'}`} />
                   {c.sidebar_overview}
                 </button>
 
@@ -1450,11 +1498,11 @@ const Account = () => {
                   onClick={() => setActiveTab('profile')}
                   className={`w-auto lg:w-full flex items-center gap-2 lg:gap-3 py-2.5 lg:py-3 px-3 lg:px-4 text-[10px] lg:text-xs font-bold uppercase tracking-wider transition-all text-left rounded-lg shrink-0 snap-start whitespace-nowrap ${
                     activeTab === 'profile' 
-                      ? 'bg-neutral-100 text-neutral-900 font-semibold shadow-2xs' 
-                      : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50/60'
+                      ? 'bg-primary text-white font-extrabold shadow-sm' 
+                      : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
                   }`}
                 >
-                  <User className={`w-4 h-4 transition-colors ${activeTab === 'profile' ? 'text-primary' : 'text-neutral-400'}`} />
+                  <User className={`w-4 h-4 transition-colors ${activeTab === 'profile' ? 'text-white' : 'text-neutral-400'}`} />
                   {c.sidebar_profile}
                 </button>
 
@@ -1462,16 +1510,16 @@ const Account = () => {
                   onClick={() => setActiveTab('orders')}
                   className={`w-auto lg:w-full flex items-center gap-2 lg:gap-3 py-2.5 lg:py-3 px-3 lg:px-4 text-[10px] lg:text-xs font-bold uppercase tracking-wider transition-all text-left rounded-lg shrink-0 snap-start whitespace-nowrap ${
                     activeTab === 'orders' 
-                      ? 'bg-neutral-100 text-neutral-900 font-semibold shadow-2xs' 
-                      : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50/60'
+                      ? 'bg-primary text-white font-extrabold shadow-sm' 
+                      : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
                   }`}
                 >
-                  <ShoppingBag className={`w-4 h-4 transition-colors ${activeTab === 'orders' ? 'text-primary' : 'text-neutral-400'}`} />
+                  <ShoppingBag className={`w-4 h-4 transition-colors ${activeTab === 'orders' ? 'text-white' : 'text-neutral-400'}`} />
                   {c.sidebar_orders}
                   {orders.length > 0 && (
                     <span className={`ml-1.5 lg:ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full border transition-colors ${
                       activeTab === 'orders'
-                        ? 'bg-white border-neutral-300 text-neutral-800'
+                        ? 'bg-white/20 border-white/30 text-white'
                         : 'bg-neutral-100 border-neutral-200 text-neutral-600'
                     }`}>
                       {orders.length}
@@ -1483,11 +1531,11 @@ const Account = () => {
                   onClick={() => setActiveTab('addresses')}
                   className={`w-auto lg:w-full flex items-center gap-2 lg:gap-3 py-2.5 lg:py-3 px-3 lg:px-4 text-[10px] lg:text-xs font-bold uppercase tracking-wider transition-all text-left rounded-lg shrink-0 snap-start whitespace-nowrap ${
                     activeTab === 'addresses' 
-                      ? 'bg-neutral-100 text-neutral-900 font-semibold shadow-2xs' 
-                      : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50/60'
+                      ? 'bg-primary text-white font-extrabold shadow-sm' 
+                      : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
                   }`}
                 >
-                  <MapPin className={`w-4 h-4 transition-colors ${activeTab === 'addresses' ? 'text-primary' : 'text-neutral-400'}`} />
+                  <MapPin className={`w-4 h-4 transition-colors ${activeTab === 'addresses' ? 'text-white' : 'text-neutral-400'}`} />
                   {c.sidebar_addresses}
                 </button>
 
@@ -1495,16 +1543,16 @@ const Account = () => {
                   onClick={() => setActiveTab('favorites')}
                   className={`w-auto lg:w-full flex items-center gap-2 lg:gap-3 py-2.5 lg:py-3 px-3 lg:px-4 text-[10px] lg:text-xs font-bold uppercase tracking-wider transition-all text-left rounded-lg shrink-0 snap-start whitespace-nowrap ${
                     activeTab === 'favorites' 
-                      ? 'bg-neutral-100 text-neutral-900 font-semibold shadow-2xs' 
-                      : 'text-neutral-500 hover:text-neutral-900 hover:bg-neutral-50/60'
+                      ? 'bg-primary text-white font-extrabold shadow-sm' 
+                      : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
                   }`}
                 >
-                  <Heart className={`w-4 h-4 transition-colors ${activeTab === 'favorites' ? 'text-primary' : 'text-neutral-400'}`} />
+                  <Heart className={`w-4 h-4 transition-colors ${activeTab === 'favorites' ? 'text-white' : 'text-neutral-400'}`} />
                   {c.sidebar_favorites}
                   {favorites.length > 0 && (
                     <span className={`ml-1.5 lg:ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full transition-colors ${
                       activeTab === 'favorites'
-                        ? 'bg-primary text-white border-transparent'
+                        ? 'bg-white text-primary border-transparent'
                         : 'bg-neutral-100 border-neutral-200 text-neutral-600'
                     }`}>
                       {favorites.length}
@@ -1978,7 +2026,7 @@ const Account = () => {
                   </div>
                 )}
 
-                {/* 3. TAB: MES ADRESSES (Grid of addresses + Add Address Form Side-by-Side) */}
+                {/* 3. TAB: MES ADRESSES (Grid of addresses - Style Trendyol Pro) */}
                 {activeTab === 'addresses' && (
                   <div className="space-y-8 animate-fade-in">
                     <div>
@@ -1987,195 +2035,90 @@ const Account = () => {
                       <div className="w-full h-[1px] bg-neutral-100 mt-4"></div>
                     </div>
                     
-                    <div className="grid grid-cols-1 xl:grid-cols-5 gap-10">
-                      {/* Liste des adresses */}
-                      <div className="xl:col-span-3 order-2 xl:order-1">
-                        {addresses.length === 0 ? (
-                          <div className="text-center py-16 border border-dashed border-neutral-200 rounded-xl bg-neutral-50/20">
-                            <MapPin className="w-8 h-8 text-neutral-300 mx-auto mb-3" />
-                            <p className="text-xs text-neutral-400 font-light">{c.no_addresses_recorded}</p>
-                          </div>
-                        ) : (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {addresses.map((addr, i) => {
-                              const isDefault = addr.is_default || (i === 0);
-                              return (
-                                <div key={i} className="border border-neutral-200 bg-white shadow-3xs hover:border-neutral-350 hover:shadow-xs transition-all duration-350 rounded-xl group p-6 flex flex-col justify-between">
-                                  <div>
-                                    {/* Header section with label and default status */}
-                                    <div className="flex justify-between items-start gap-4 mb-5 pb-3.5 border-b border-neutral-100">
-                                      <div>
-                                        {addr.label ? (
-                                          <span className="text-[10px] font-bold uppercase tracking-wider bg-neutral-100 border border-neutral-200/60 text-neutral-700 px-2.5 py-0.5 rounded-md">
-                                            {addr.label}
-                                          </span>
-                                        ) : (
-                                          <span className="text-[10px] font-bold uppercase tracking-wider bg-neutral-50 border border-neutral-200/60 text-neutral-500 px-2.5 py-0.5 rounded-md">
-                                            {c.address_label}
-                                          </span>
-                                        )}
-                                      </div>
-                                      {isDefault && (
-                                        <span className="text-[9px] uppercase tracking-widest font-bold text-emerald-700 px-2.5 py-0.5 rounded-full border border-emerald-250 bg-emerald-50/60 flex items-center gap-1 shadow-2xs">
-                                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                                          {c.default}
-                                        </span>
-                                      )}
-                                    </div>
-
-                                    {/* Structured Info fields */}
-                                    <div className="space-y-3.5 text-xs text-neutral-700">
-                                      <div>
-                                        <p className="text-[9px] uppercase font-bold text-neutral-400 tracking-wider">{c.recipient}</p>
-                                        <p className="font-semibold text-neutral-900 mt-0.5">{addr.customer_name || customerUser?.name || 'Client'}</p>
-                                      </div>
-                                      <div>
-                                        <p className="text-[9px] uppercase font-bold text-neutral-400 tracking-wider">{c.address_label}</p>
-                                        <p className="font-mono text-neutral-800 leading-relaxed mt-0.5 text-xs">
-                                          {addr.shipping_address || `${addr.address || ''} ${addr.postalCode || ''} ${addr.city || ''} ${addr.country || ''}`.trim()}
-                                        </p>
-                                      </div>
-                                      {addr.customer_phone && (
-                                        <div>
-                                          <p className="text-[9px] uppercase font-bold text-neutral-400 tracking-wider">{c.phone}</p>
-                                          <p className="font-mono text-neutral-800 mt-0.5 text-xs">{addr.customer_phone}</p>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  {/* Card actions footer */}
-                                  <div className="mt-6 pt-4 border-t border-neutral-100 flex justify-between items-center">
-                                    {!isDefault ? (
-                                      <button
-                                        onClick={() => handleSetDefaultAddress(addr.id)}
-                                        disabled={addressLoading}
-                                        className="text-[10px] uppercase tracking-wider font-semibold text-neutral-500 hover:text-accent disabled:opacity-50 transition-colors cursor-pointer bg-transparent border-none"
-                                      >
-                                        {c.set_as_default}
-                                      </button>
-                                    ) : (
-                                      <div />
-                                    )}
-                                    <button
-                                      onClick={() => handleDeleteAddress(addr.id)}
-                                      disabled={addressLoading}
-                                      className="w-8 h-8 flex items-center justify-center bg-white border border-neutral-200 text-neutral-400 hover:text-danger hover:border-danger hover:bg-red-50 disabled:opacity-50 transition-all rounded-lg cursor-pointer"
-                                      title={c.delete_address_title}
-                                    >
-                                      {addressLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                                    </button>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Formulaire d'ajout d'adresse */}
-                      <div className="xl:col-span-2 order-1 xl:order-2">
-                        <div className="border border-neutral-200 bg-white p-8 rounded-xl shadow-3xs sticky top-32">
-                          <h3 className="text-xs font-bold uppercase tracking-widest text-primary mb-6 flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-accent" />
-                            {c.new_address}
-                          </h3>
-                          <form onSubmit={handleAddAddress} className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-1.5">
-                                <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{c.recipient_name}</label>
-                                <input
-                                  type="text"
-                                  required
-                                  value={newAddress.customer_name}
-                                  onChange={(e) => setNewAddress({...newAddress, customer_name: e.target.value})}
-                                  placeholder={locale === 'en' ? 'Full Name' : 'Nom Complet'}
-                                  className="w-full py-3 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-lg transition-all placeholder-neutral-400 font-light"
-                                />
-                              </div>
-                              <div className="space-y-1.5">
-                                <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{c.phone}</label>
-                                <input
-                                  type="tel"
-                                  required
-                                  value={newAddress.customer_phone}
-                                  onChange={(e) => setNewAddress({...newAddress, customer_phone: e.target.value})}
-                                  placeholder="+225..."
-                                  className="w-full py-3 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-lg transition-all placeholder-neutral-400 font-light"
-                                />
-                              </div>
-                            </div>
-                            <div className="space-y-1.5">
-                              <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{c.address_label_field}</label>
-                              <input
-                                type="text"
-                                value={newAddress.label}
-                                onChange={(e) => setNewAddress({...newAddress, label: e.target.value})}
-                                placeholder={c.optional_label_placeholder}
-                                className="w-full py-3 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-lg transition-all placeholder-neutral-400 font-light"
-                              />
-                            </div>
-                            <div className="space-y-1.5">
-                              <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{c.full_address}</label>
-                              <input
-                                type="text"
-                                required
-                                value={newAddress.address}
-                                onChange={(e) => setNewAddress({...newAddress, address: e.target.value})}
-                                placeholder={c.address_placeholder}
-                                className="w-full py-3 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-lg transition-all placeholder-neutral-400 font-light"
-                              />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-1.5">
-                                <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{c.city}</label>
-                                <input
-                                  type="text"
-                                  required
-                                  value={newAddress.city}
-                                  onChange={(e) => setNewAddress({...newAddress, city: e.target.value})}
-                                  placeholder="Abidjan"
-                                  className="w-full py-3 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-lg transition-all placeholder-neutral-400 font-light"
-                                />
-                              </div>
-                              <div className="space-y-1.5">
-                                <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{c.postal_code}</label>
-                                <input
-                                  type="text"
-                                  value={newAddress.postalCode}
-                                  onChange={(e) => setNewAddress({...newAddress, postalCode: e.target.value})}
-                                  placeholder={c.optional}
-                                  className="w-full py-3 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-lg transition-all placeholder-neutral-400 font-light"
-                                />
-                              </div>
-                            </div>
-                            <div className="space-y-1.5">
-                              <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{c.country}</label>
-                              <input
-                                type="text"
-                                required
-                                value={newAddress.country}
-                                onChange={(e) => setNewAddress({...newAddress, country: e.target.value})}
-                                placeholder="Côte d'Ivoire"
-                                className="w-full py-3 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-lg transition-all placeholder-neutral-400 font-light"
-                              />
-                            </div>
-                            
-                            <button
-                              type="submit"
-                              disabled={addressLoading}
-                              className="w-full bg-primary hover:bg-neutral-850 text-white py-3.5 text-xs font-semibold uppercase tracking-widest transition-all rounded-lg flex items-center justify-center gap-2 mt-6 cursor-pointer shadow-md shadow-primary/5"
-                            >
-                              {addressLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (
-                                <>
-                                  <Save className="w-4 h-4" />
-                                  {c.save_address}
-                                </>
-                              )}
-                            </button>
-                          </form>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {/* Plus Card for adding address */}
+                      <div
+                        onClick={() => setIsAddressModalOpen(true)}
+                        className="group border-2 border-dashed border-neutral-300 hover:border-neutral-800 bg-neutral-50/20 hover:bg-neutral-50/50 p-6 flex flex-col items-center justify-center min-h-[200px] cursor-pointer transition-all rounded-xl select-none text-center"
+                      >
+                        <div className="w-12 h-12 rounded-full border border-neutral-300 flex items-center justify-center text-neutral-400 group-hover:text-neutral-800 group-hover:border-neutral-800 mb-4 transition-all">
+                          <span className="text-2xl font-light leading-none">+</span>
                         </div>
+                        <span className="text-xs font-bold uppercase tracking-wider text-neutral-500 group-hover:text-neutral-800 transition-colors">
+                          {c.new_address}
+                        </span>
                       </div>
+
+                      {/* Displaying addresses */}
+                      {addresses.map((addr, i) => {
+                        const isDefault = addr.is_default || (i === 0 && addresses.every(a => !a.is_default));
+                        return (
+                          <div key={i} className="border border-neutral-200 bg-white hover:border-neutral-400 hover:shadow-xs transition-all duration-300 rounded-xl p-6 flex flex-col justify-between min-h-[200px] relative">
+                            <div>
+                              {/* Header info */}
+                              <div className="flex justify-between items-start gap-4 mb-4 pb-3 border-b border-neutral-150">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-neutral-800">
+                                  {addr.label || c.address_label}
+                                </span>
+                                {isDefault && (
+                                  <span className="text-[8.5px] uppercase tracking-wider font-extrabold text-emerald-700 px-2 py-0.5 border border-emerald-250 bg-emerald-50 flex items-center gap-1 shadow-3xs">
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                    {c.default}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Info details */}
+                              <div className="space-y-2.5 text-xs text-neutral-700">
+                                <div>
+                                  <p className="text-[8.5px] uppercase font-bold text-neutral-400 tracking-wider">Destinataire</p>
+                                  <p className="font-bold text-neutral-900 mt-0.5">{addr.customer_name || customerUser?.name || 'Client'}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[8.5px] uppercase font-bold text-neutral-400 tracking-wider">Adresse</p>
+                                  <p className="font-medium text-neutral-850 leading-relaxed mt-0.5 text-xs">
+                                    {addr.shipping_address}
+                                  </p>
+                                  {(addr.commune || addr.region || addr.country) && (
+                                    <p className="text-[10.5px] text-neutral-500 font-normal mt-0.5">
+                                      {[addr.commune, addr.region, addr.country === 'CI' ? "Côte d'Ivoire" : addr.country].filter(Boolean).join(', ')}
+                                    </p>
+                                  )}
+                                </div>
+                                {addr.customer_phone && (
+                                  <div>
+                                    <p className="text-[8.5px] uppercase font-bold text-neutral-400 tracking-wider">Téléphone</p>
+                                    <p className="font-mono text-neutral-800 mt-0.5 text-xs">{addr.customer_phone}</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Footer links */}
+                            <div className="mt-5 pt-3.5 border-t border-neutral-150 flex justify-between items-center">
+                              {!isDefault ? (
+                                <button
+                                  onClick={() => handleSetDefaultAddress(addr.id)}
+                                  disabled={addressLoading}
+                                  className="text-[9px] uppercase tracking-widest font-black text-neutral-400 hover:text-accent disabled:opacity-50 transition-colors cursor-pointer bg-transparent border-none p-0"
+                                >
+                                  {c.set_as_default}
+                                </button>
+                              ) : (
+                                <div />
+                              )}
+                              <button
+                                onClick={() => handleDeleteAddress(addr.id)}
+                                disabled={addressLoading}
+                                className="w-7 h-7 flex items-center justify-center bg-white border border-neutral-250 text-neutral-400 hover:text-danger hover:border-danger hover:bg-red-50 disabled:opacity-50 transition-all rounded-sm cursor-pointer"
+                                title={c.delete_address_title}
+                              >
+                                {addressLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -2249,6 +2192,183 @@ const Account = () => {
             isOpen={!!activeQuickAddProduct} 
             onClose={() => setActiveQuickAddProduct(null)} 
           />,
+          document.body
+        )}
+        {/* Address Modal Portal - at root level to avoid tab context issues */}
+        {isAddressModalOpen && createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+            <div 
+              onClick={() => setIsAddressModalOpen(false)}
+              className="absolute inset-0 bg-neutral-950/60 backdrop-blur-sm"
+            />
+            <div 
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-lg bg-white p-7 md:p-8 border border-neutral-200 shadow-2xl rounded-xl z-10 text-left overflow-y-auto max-h-[90vh]">
+              <button
+                onClick={() => setIsAddressModalOpen(false)}
+                className="absolute top-4 right-4 text-neutral-400 hover:text-neutral-600 p-1 text-2xl font-light leading-none focus:outline-none"
+              >
+                &times;
+              </button>
+              
+              <h3 className="text-sm font-bold uppercase tracking-widest text-primary mb-6 flex items-center gap-2.5 pb-2.5 border-b border-neutral-100">
+                <MapPin className="w-4 h-4 text-accent" />
+                {c.new_address}
+              </h3>
+              
+              <form onSubmit={handleAddAddress} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5 text-left">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-800">{c.recipient_name}</label>
+                    <input
+                      type="text"
+                      required
+                      value={newAddress.customer_name}
+                      onChange={(e) => setNewAddress({...newAddress, customer_name: e.target.value})}
+                      placeholder={locale === 'en' ? 'Full Name' : 'Nom Complet'}
+                      className="w-full py-3 px-4 text-xs bg-white border border-neutral-300 focus:border-neutral-900 focus:outline-none transition-colors"
+                    />
+                  </div>
+                  <div className="space-y-1.5 text-left">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-800">{c.phone}</label>
+                    <input
+                      type="tel"
+                      required
+                      value={newAddress.customer_phone}
+                      onChange={(e) => setNewAddress({...newAddress, customer_phone: e.target.value})}
+                      placeholder="+225..."
+                      className="w-full py-3 px-4 text-xs bg-white border border-neutral-300 focus:border-neutral-900 focus:outline-none transition-colors"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5 text-left">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-800">{c.address_label_field}</label>
+                  <input
+                    type="text"
+                    value={newAddress.label}
+                    onChange={(e) => setNewAddress({...newAddress, label: e.target.value})}
+                    placeholder={c.optional_label_placeholder}
+                    className="w-full py-3 px-4 text-xs bg-white border border-neutral-300 focus:border-neutral-900 focus:outline-none transition-colors"
+                  />
+                </div>
+
+                <div className="space-y-2 text-left">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-800 flex items-center gap-1.5">
+                    <Globe className="w-3.5 h-3.5 text-neutral-600" />
+                    Pays de livraison
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setDeliveryCountry('CI')}
+                      className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-all select-none text-left bg-transparent ${
+                        deliveryCountry === 'CI'
+                          ? 'border-neutral-900 shadow-sm font-bold text-neutral-900 bg-neutral-50'
+                          : 'border-neutral-200 hover:border-neutral-400 text-neutral-500'
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold leading-tight">Côte d'Ivoire</div>
+                        <div className="text-[9px] text-neutral-400 mt-0.5">Livraison locale</div>
+                      </div>
+                      {deliveryCountry === 'CI' && <Check className="w-3.5 h-3.5 text-neutral-900 shrink-0 stroke-[3]" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setDeliveryCountry('OTHER'); setSelectedRegion(''); setSelectedCommune(''); }}
+                      className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-all select-none text-left bg-transparent ${
+                        deliveryCountry === 'OTHER'
+                          ? 'border-neutral-900 shadow-sm font-bold text-neutral-900 bg-neutral-50'
+                          : 'border-neutral-200 hover:border-neutral-400 text-neutral-500'
+                      }`}
+                    >
+                      <div className="min-w-0">
+                        <div className="text-xs font-bold leading-tight">International</div>
+                        <div className="text-[9px] text-neutral-400 mt-0.5">Hors Côte d'Ivoire</div>
+                      </div>
+                      {deliveryCountry === 'OTHER' && <Check className="w-3.5 h-3.5 text-neutral-900 shrink-0 stroke-[3]" />}
+                    </button>
+                  </div>
+                </div>
+
+                {deliveryCountry === 'CI' ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5 text-left">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-800 flex items-center gap-1.5">
+                        <Building2 className="w-3.5 h-3.5 text-neutral-600" />
+                        Région
+                      </label>
+                      <select
+                        value={selectedRegion}
+                        onChange={(e) => setSelectedRegion(e.target.value)}
+                        required
+                        className="w-full border border-neutral-300 rounded-lg py-2.5 px-3 text-xs bg-white focus:outline-none focus:border-neutral-900 h-11"
+                      >
+                        <option value="">Sélectionner</option>
+                        {regions.map((reg) => (
+                          <option key={reg.id} value={reg.id}>{reg.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-1.5 text-left">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-800 flex items-center gap-1.5">
+                        <MapPin className="w-3.5 h-3.5 text-neutral-600" />
+                        Commune
+                      </label>
+                      <select
+                        value={selectedCommune}
+                        onChange={(e) => setSelectedCommune(e.target.value)}
+                        required
+                        disabled={!selectedRegion}
+                        className="w-full border border-neutral-300 rounded-lg py-2.5 px-3 text-xs bg-white focus:outline-none focus:border-neutral-900 h-11 disabled:bg-neutral-50 disabled:border-neutral-200"
+                      >
+                        <option value="">Sélectionner</option>
+                        {communes.map((com) => (
+                          <option key={com.id} value={com.id}>{com.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5 text-left">
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-800">Pays de destination</label>
+                    <input
+                      type="text"
+                      required
+                      value={newAddress.country || ''}
+                      onChange={(e) => setNewAddress({...newAddress, country: e.target.value})}
+                      placeholder="France, Sénégal, Canada..."
+                      className="w-full py-3 px-4 text-xs bg-white border border-neutral-300 focus:border-neutral-900 focus:outline-none transition-colors"
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-1.5 text-left">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-800">
+                    {deliveryCountry === 'CI' ? 'Rue / Quartier / Précisions' : 'Adresse complète'}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newAddress.address}
+                    onChange={(e) => setNewAddress({...newAddress, address: e.target.value})}
+                    placeholder={deliveryCountry === 'CI' ? 'Ex: Bvd de Marseille, Résidence Royal, Appt 4B' : 'Ex: 12 Rue de la Paix, 75002 Paris, France'}
+                    className="w-full py-3 px-4 text-xs bg-white border border-neutral-300 focus:border-neutral-900 focus:outline-none transition-colors"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={addressLoading}
+                  className="w-full h-11 bg-neutral-950 hover:bg-neutral-900 text-white font-bold uppercase tracking-widest text-xs transition-colors flex items-center justify-center gap-2 mt-6 cursor-pointer select-none"
+                >
+                  {addressLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+                    <><Save className="w-4 h-4" />{c.save_address}</>
+                  )}
+                </button>
+              </form>
+            </div>
+          </div>,
           document.body
         )}
       </div>

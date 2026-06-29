@@ -234,6 +234,24 @@ export const adminService = {
     const response = await apiClient.put('/admin/auth/password', data);
     return response.data;
   },
+
+  // Sauvegarder la configuration du footer
+  updateFooterConfig: async (footerConfig) => {
+    const response = await apiClient.post('/admin/footer', footerConfig);
+    return response.data;
+  },
+
+  // Sauvegarder les slides de la page d'accueil
+  updateHomeSlides: async (slides) => {
+    const response = await apiClient.post('/admin/home-slides', { slides });
+    return response.data;
+  },
+
+  // Sauvegarder les bannières personnalisées du Méga Menu
+  updateMenuBanners: async (banners) => {
+    const response = await apiClient.post('/admin/menu-banners', { banners });
+    return response.data;
+  },
 };
 
 export default adminService;

@@ -48,7 +48,7 @@ export const Preloader = () => {
         {/* Sleek Dress Shoe SVG */}
         <div className="relative mb-8 text-accent animate-float">
           <svg
-            className="w-24 h-24 stroke-[1.5]"
+            className="w-24 h-24 stroke-2"
             viewBox="0 0 100 100"
             fill="none"
             stroke="currentColor"
@@ -56,16 +56,30 @@ export const Preloader = () => {
             strokeLinejoin="round"
             xmlns="http://www.w3.org/2000/svg"
           >
-            {/* Heel */}
-            <path d="M15 70 L20 80 L35 80 L35 70" />
-            {/* Sole */}
-            <path d="M35 70 C50 72 70 70 85 70" strokeWidth="2.5" />
-            {/* Upper body outline */}
-            <path d="M15 70 C10 55 18 48 32 45 C38 45 42 35 48 32 C52 29 60 30 65 35 C70 40 75 48 85 58 C90 62 90 68 85 70" />
-            {/* Laces details */}
-            <path d="M42 35 L47 40 M45 32 L50 37 M48 29 L53 34" strokeWidth="1.2" />
-            {/* Stitching details */}
-            <path d="M32 45 C40 46 48 50 55 58" strokeDasharray="3 3" strokeWidth="1" opacity="0.6" />
+            {/* Collar / opening */}
+            <path d="M 28 32 C 34 38, 44 38, 52 30" />
+            {/* Back heel counter */}
+            <path d="M 28 32 C 24 37, 22 41, 22 44" />
+            {/* Inside dividing line */}
+            <path d="M 28 32 C 35 45, 45 55, 58 65" />
+            {/* Vamp / Front profile */}
+            <path d="M 52 30 C 60 40, 70 50, 78 56" />
+            {/* Toe cap curve */}
+            <path d="M 78 56 C 80 59, 78 62, 76 63" />
+            {/* Sole top line */}
+            <path d="M 22 44 L 58 65 L 76 63" />
+            {/* Laces */}
+            <path d="M 48 42 L 54 36" />
+            <path d="M 52 46 L 58 40" />
+            <path d="M 56 50 L 62 44" />
+            {/* Thick 3D sole bottom */}
+            <path d="M 22 49 L 56 73 L 74 71" />
+            {/* Heel sole line */}
+            <path d="M 22 44 L 22 49" />
+            {/* Toe sole line */}
+            <path d="M 76 63 L 74 71" />
+            {/* Inner sole bevel line */}
+            <path d="M 22 46.5 L 57 70 L 75 68" strokeWidth={1} />
           </svg>
         </div>
 

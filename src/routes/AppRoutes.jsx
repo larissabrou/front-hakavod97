@@ -10,6 +10,7 @@ import { useCart } from '../hooks/useCart';
 import { useSettings } from '../hooks/useSettings';
 import { useFavorites } from '../hooks/useFavorites';
 import { useCustomerAuth } from '../hooks/useCustomerAuth';
+import storeService from '../services/api/storeService';
 
 const COUNTRY_INFO = {
   CI: { flag: '🇨🇮', dial: '+225' },
@@ -232,15 +233,31 @@ const StorefrontLayout = ({ children }) => {
   const [footerConfig, setFooterConfig] = useState(DEFAULT_FOOTER_CONFIG);
 
   useEffect(() => {
-    const stored = localStorage.getItem('storefront_footer_config');
-    if (stored) {
+    const loadFooter = async () => {
       try {
-        setFooterConfig(JSON.parse(stored));
+        const data = await storeService.getFooter({ lang: activeLocale });
+        if (data) {
+          // Si le backend retourne l'objet sous format { success, data } ou directement
+          const config = data.data || data;
+          if (config && (config.columns || config.description)) {
+            setFooterConfig(config);
+            localStorage.setItem('storefront_footer_config', JSON.stringify(config));
+          }
+        }
       } catch (e) {
-        console.error("Erreur de chargement du footer", e);
+        console.warn("Échec de récupération du footer depuis l'API, utilisation du cache local.", e);
+        const stored = localStorage.getItem('storefront_footer_config');
+        if (stored) {
+          try {
+            setFooterConfig(JSON.parse(stored));
+          } catch (err) {
+            console.error("Erreur de parsing du cache local du footer", err);
+          }
+        }
       }
-    }
-  }, []);
+    };
+    loadFooter();
+  }, [activeLocale]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -399,6 +416,10 @@ const StorefrontLayout = ({ children }) => {
     ? "border-t border-white/10 bg-transparent hidden md:block"
     : "border-t border-neutral-200/40 bg-neutral-50 hidden md:block";
 
+  const logoClass = isHeaderTransparent
+    ? "h-12 md:h-36 w-auto object-contain transition-all duration-300 group-hover:scale-105 md:absolute md:top-1 md:left-0"
+    : "h-10 md:h-14 w-auto object-contain transition-all duration-300 group-hover:scale-105 md:absolute md:top-3 md:left-0";
+
   return (
     <div className="min-h-screen flex flex-col bg-neutral-50 font-sans text-neutral-900">
       {/* Header minimaliste style Defacto */}
@@ -420,19 +441,14 @@ const StorefrontLayout = ({ children }) => {
               <img
                 src="/logo.png"
                 alt="HA-KAVOD 97 Logo"
-                className="h-12 md:h-36 w-auto object-contain transition-transform duration-300 group-hover:scale-105 md:absolute md:top-1 md:left-0"
+                className={logoClass}
               />
             </Link>
           </div>
 
-          {/* Barre de Recherche (Centre sur desktop, cachée sur mobile) */}
-          <div className={`${searchClass} md:mx-auto`}>
-            <Search className={searchIconClass} />
-            <input
-              type="text"
-              placeholder={t('search_placeholder')}
-              className={`bg-transparent text-xs w-full ${searchInputPlaceholder}`}
-            />
+          {/* Menu de Navigation (Centre sur desktop) */}
+          <div className="hidden md:flex items-center justify-center flex-1 px-8">
+            <MegaMenu isTransparent={isHeaderTransparent} />
           </div>
 
           {/* Actions Client (Droite) */}
@@ -522,12 +538,7 @@ const StorefrontLayout = ({ children }) => {
           </div>
         </div>
 
-        {/* MegaMenu (En dessous de la barre principale) */}
-        <div className={megaMenuWrapperClass}>
-          <div className="w-full px-10 h-12 flex items-center md:pl-56">
-            <MegaMenu isTransparent={isHeaderTransparent} />
-          </div>
-        </div>
+
       </header>
 
       {/* Menu de navigation mobile (tiroir) */}
@@ -605,12 +616,13 @@ const StorefrontLayout = ({ children }) => {
                   <div className="h-full flex flex-col items-center justify-center text-center py-12">
                     <Heart className="w-12 h-12 text-neutral-300 stroke-1 mb-4" />
                     <p className="text-sm text-neutral-500 font-medium">{t('favorites_empty')}</p>
-                    <button
+                    <Link
+                      to="/catalog"
                       onClick={() => setIsFavoritesOpen(false)}
-                      className="mt-6 bg-primary hover:bg-neutral-800 text-white text-xs font-bold uppercase tracking-widest py-3 px-6 rounded-xs transition-colors"
+                      className="mt-6 bg-primary hover:bg-neutral-800 text-white text-xs font-bold uppercase tracking-widest py-3 px-6 rounded-xs transition-colors inline-block text-center"
                     >
                       {t('discover_collection')}
-                    </button>
+                    </Link>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-5">

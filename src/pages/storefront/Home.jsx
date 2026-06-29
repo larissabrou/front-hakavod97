@@ -799,10 +799,8 @@ export const Home = () => {
             </div>
           </div>
 
-          {featuredLoading ? (
+          {featuredLoading || featuredError ? (
             <ProductLoader text={tContent.loading_featured} />
-          ) : featuredError ? (
-            <div className="py-16 text-center text-red-600 text-sm">{featuredError}</div>
           ) : featuredProducts.length === 0 ? (
             <div className="py-16 text-center text-neutral-500">{tContent.no_featured}</div>
           ) : (

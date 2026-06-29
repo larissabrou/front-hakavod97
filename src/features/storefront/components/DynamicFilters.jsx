@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useSettings } from '../../../hooks/useSettings';
 import { translateColor } from '../../../services/translations';
@@ -11,7 +11,34 @@ export const DynamicFilters = ({
   availableColors = [],
   availablePriceRanges = [],
 }) => {
-  const { t, activeLocale } = useSettings();
+  const { t, activeLocale, activeCurrency, currencies } = useSettings();
+  const [minInput, setMinInput] = useState('');
+  const [maxInput, setMaxInput] = useState('');
+
+  const activeCurConfig = currencies?.find(c => c.code === activeCurrency);
+  const currencySymbol = activeCurConfig?.symbol || activeCurrency;
+
+  useEffect(() => {
+    if (filters.priceRange) {
+      const [minVal, maxVal] = filters.priceRange.split('-');
+      setMinInput(minVal && minVal !== '0' ? minVal : '');
+      setMaxInput(maxVal && maxVal !== '999999999' && maxVal !== '16777215' && maxVal !== '9007199254740991' ? maxVal : '');
+    } else {
+      setMinInput('');
+      setMaxInput('');
+    }
+  }, [filters.priceRange]);
+
+  const handleApplyCustomPrice = () => {
+    const min = minInput.trim() === '' ? '0' : minInput.trim();
+    const max = maxInput.trim() === '' ? '999999999' : maxInput.trim();
+    
+    if (min === '0' && max === '999999999') {
+      onFilterChange('priceRange', '', true);
+    } else {
+      onFilterChange('priceRange', `${min}-${max}`, true);
+    }
+  };
 
   const normalizedColors = availableColors.map((color) => {
     if (!color) return null;
@@ -103,11 +130,45 @@ export const DynamicFilters = ({
         </div>
       </div>
 
-      {/* Filtre des Prix (Tranches) */}
+      {/* Filtre des Prix (Tranches) - Style Trendyol Pro */}
       <div>
-        <h4 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-3 pb-1 border-b border-neutral-50">
+        <h4 className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-3.5 pb-1 border-b border-neutral-100">
           {t('price_range')}
         </h4>
+        
+        {/* Inputs de prix Min / Max personnalisés */}
+        <div className="flex items-center gap-2 mb-4.5">
+          <div className="flex-1">
+            <input
+              type="number"
+              placeholder={`Min (${currencySymbol})`}
+              value={minInput}
+              onChange={(e) => setMinInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleApplyCustomPrice()}
+              className="w-full h-9 text-xs font-semibold px-2.5 border border-neutral-200 bg-white placeholder-neutral-300 focus:border-neutral-950 focus:outline-none transition-colors"
+            />
+          </div>
+          <span className="text-neutral-300 text-xs font-semibold shrink-0">-</span>
+          <div className="flex-1">
+            <input
+              type="number"
+              placeholder={`Max (${currencySymbol})`}
+              value={maxInput}
+              onChange={(e) => setMaxInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleApplyCustomPrice()}
+              className="w-full h-9 text-xs font-semibold px-2.5 border border-neutral-200 bg-white placeholder-neutral-300 focus:border-neutral-950 focus:outline-none transition-colors"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={handleApplyCustomPrice}
+            className="h-9 px-4 bg-neutral-950 hover:bg-neutral-900 border border-neutral-950 text-white text-[10px] font-black uppercase tracking-widest transition-colors shrink-0 cursor-pointer select-none"
+          >
+            OK
+          </button>
+        </div>
+
+        {/* Tranches prédéfinies sous forme de checkboxes */}
         <div className="flex flex-col gap-2">
           {availablePriceRanges.length === 0 ? (
             <div className="text-xs text-neutral-500">{t('no_prices')}</div>
@@ -118,12 +179,16 @@ export const DynamicFilters = ({
                 <label
                   key={priceRange.value}
                   className="flex items-center gap-3 text-xs font-semibold text-neutral-700 hover:text-neutral-950 cursor-pointer group select-none py-1"
-                  onClick={() => onFilterChange('priceRange', priceRange.value, true)}
+                  onClick={() => onFilterChange('priceRange', isSelected ? '' : priceRange.value, true)}
                 >
-                  <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 transition-all ${
-                    isSelected ? 'border-neutral-900 bg-neutral-900 shadow-sm' : 'border-neutral-300 group-hover:border-neutral-400 bg-white'
+                  <span className={`w-3.5 h-3.5 border flex items-center justify-center shrink-0 transition-all ${
+                    isSelected ? 'border-neutral-900 bg-neutral-900 text-white shadow-xs' : 'border-neutral-300 group-hover:border-neutral-400 bg-white'
                   }`}>
-                    {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    {isSelected && (
+                      <svg className="w-2.5 h-2.5 stroke-[3.5] text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3.5} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
                   </span>
                   <span>{priceRange.label}</span>
                 </label>

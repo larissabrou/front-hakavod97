@@ -192,9 +192,46 @@ export const Catalog = () => {
 
     const minPrice = prices[0];
     const maxPrice = prices[prices.length - 1];
-    const step = Math.max(10000, Math.round((maxPrice - minPrice) / 3));
-    const firstLimit = minPrice + step;
-    const secondLimit = minPrice + step * 2;
+    
+    if (maxPrice - minPrice < 500) {
+      const formatLabel = (amount) =>
+        new Intl.NumberFormat('fr-FR', {
+          style: 'currency',
+          currency: activeCurrency,
+          maximumFractionDigits: 0,
+        }).format(amount);
+      const mid = Math.round((minPrice + maxPrice) / 2);
+      return [
+        { label: `${t('price_under')} ${formatLabel(mid)}`, value: `0-${mid}` },
+        { label: `${t('price_over')} ${formatLabel(mid)}`, value: `${mid}-${Number.MAX_SAFE_INTEGER}` },
+      ];
+    }
+
+    let step = Math.round((maxPrice - minPrice) / 3);
+    
+    // Arrondir le step à des valeurs propres
+    if (step > 100000) {
+      step = Math.round(step / 50000) * 50000;
+    } else if (step > 20000) {
+      step = Math.round(step / 10000) * 10000;
+    } else if (step > 5000) {
+      step = Math.round(step / 5000) * 5000;
+    } else {
+      step = Math.max(1000, Math.round(step / 1000) * 1000);
+    }
+
+    // Arrondir minPrice vers le bas à des valeurs propres
+    let cleanMin = minPrice;
+    if (cleanMin > 10000) {
+      cleanMin = Math.floor(cleanMin / 10000) * 10000;
+    } else if (cleanMin > 1000) {
+      cleanMin = Math.floor(cleanMin / 1000) * 1000;
+    } else {
+      cleanMin = 0;
+    }
+
+    const firstLimit = cleanMin + step;
+    const secondLimit = cleanMin + step * 2;
 
     const formatLabel = (amount) =>
       new Intl.NumberFormat('fr-FR', {
@@ -204,7 +241,7 @@ export const Catalog = () => {
       }).format(amount);
 
     return [
-      { label: `${formatLabel(minPrice)} - ${formatLabel(firstLimit)}`, value: `${minPrice}-${firstLimit}` },
+      { label: `${formatLabel(cleanMin)} - ${formatLabel(firstLimit)}`, value: `${cleanMin}-${firstLimit}` },
       { label: `${formatLabel(firstLimit)} - ${formatLabel(secondLimit)}`, value: `${firstLimit}-${secondLimit}` },
       { label: `${t('price_over')} ${formatLabel(secondLimit)}`, value: `${secondLimit}-${Number.MAX_SAFE_INTEGER}` },
     ];

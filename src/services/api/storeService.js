@@ -28,6 +28,18 @@ export const storeService = {
     const response = await apiClient.get('/store/home-blocks', { params });
     return response.data?.data ?? response.data;
   },
+
+  // Récupérer la configuration dynamique du footer
+  getFooter: async (params = {}) => {
+    const response = await apiClient.get('/store/footer', { params });
+    return response.data?.data ?? response.data;
+  },
+
+  // Récupérer les bannières personnalisées du Méga Menu
+  getMenuBanners: async () => {
+    const response = await apiClient.get('/store/menu-banners');
+    return response.data?.data ?? response.data;
+  },
 };
 
 export default storeService;

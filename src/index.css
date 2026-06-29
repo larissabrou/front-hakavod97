@@ -280,3 +280,33 @@ select {
   background-position: right 0.15rem center !important;
   background-size: 0.55rem !important;
 }
+
+/* ── Overrides pour rendre les formulaires et inputs plus professionnels et visibles ── */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="tel"],
+input[type="number"],
+select,
+textarea {
+  background-color: #ffffff !important;
+  border-color: #d4c8b3 !important; /* neutral-300 / accent-light border pour haute visibilité */
+  color: #17070a !important; /* neutral-950 pour contraste maximum */
+  font-weight: 500 !important;
+  border-radius: 4px !important;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="tel"]:focus,
+input[type="number"]:focus,
+select:focus,
+textarea:focus {
+  border-color: #540c14 !important; /* primary pour le focus */
+  box-shadow: 0 0 0 2px rgba(84, 12, 20, 0.1) !important;
+}
+
+label {
+  color: #2d251d !important; /* neutral-800 pour lisibilité des labels */
+}

@@ -5,6 +5,7 @@ import productService from '../../../services/api/productService';
 import { useSettings } from '../../../hooks/useSettings';
 import { useCustomerAuth } from '../../../hooks/useCustomerAuth';
 import { useFavorites } from '../../../hooks/useFavorites';
+import ProductLoader from '../../../components/ui/ProductLoader';
 
 const CATEGORY_TRANSLATIONS = {
   "robes": "Dresses",
@@ -153,7 +154,7 @@ export const MobileMenu = ({ isOpen, onClose, onOpenAuth }) => {
               
               <nav className="flex flex-col border-t border-neutral-100/70">
                 {isLoadingCategories ? (
-                  <div className="py-4 text-xs text-neutral-500">{activeLocale === 'en' ? "Loading categories..." : "Chargement des catégories..."}</div>
+                  <ProductLoader text={activeLocale === 'en' ? "Loading categories..." : "Chargement des catégories..."} compact={true} />
                 ) : displayCategories.length === 0 ? (
                   <div className="py-4 text-xs text-neutral-500">{activeLocale === 'en' ? "No categories available at the moment." : "Aucune catégorie disponible pour le moment."}</div>
                 ) : (

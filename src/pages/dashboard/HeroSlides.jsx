@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Eye, EyeOff, Check, X, ArrowRight, Image as ImageIcon, Video as VideoIcon, Sliders, LayoutGrid } from 'lucide-react';
 import { useSettings } from '../../hooks/useSettings';
 import productService from '../../services/api/productService';
+import adminService from '../../services/api/adminService';
+import storeService from '../../services/api/storeService';
 
 const DEFAULT_SLIDES = [
   {
@@ -174,87 +176,170 @@ export const HeroSlides = ({
 
   // Charger les slides depuis localStorage au montage ou changement
   useEffect(() => {
-    // 1. Carrousel Produits (Milieu)
-    const storedMiddle = localStorage.getItem('home_hero_slides');
-    if (storedMiddle) {
-      try { setMiddleSlides(JSON.parse(storedMiddle)); }
-      catch (e) {
-        setMiddleSlides(DEFAULT_SLIDES);
-        localStorage.setItem('home_hero_slides', JSON.stringify(DEFAULT_SLIDES));
-      }
-    } else {
-      setMiddleSlides(DEFAULT_SLIDES);
-      localStorage.setItem('home_hero_slides', JSON.stringify(DEFAULT_SLIDES));
-    }
+    // 1 & 2. Charger les Slides depuis l'API ou localement
+    const loadSlides = async () => {
+      try {
+        const slidesData = await storeService.getHomeSlides();
+        if (Array.isArray(slidesData) && slidesData.length > 0) {
+          const fullSlides = slidesData.filter(s => s.layout === 'full');
+          const splitSlides = slidesData.filter(s => s.layout === 'split');
 
-    // 2. Carrousel Principal (Haut)
-    const storedTop = localStorage.getItem('main_hero_slides');
-    if (storedTop) {
-      try { setTopSlides(JSON.parse(storedTop)); }
-      catch (e) {
-        setTopSlides(DEFAULT_TOP_SLIDES);
-        localStorage.setItem('main_hero_slides', JSON.stringify(DEFAULT_TOP_SLIDES));
-      }
-    } else {
-      setTopSlides(DEFAULT_TOP_SLIDES);
-      localStorage.setItem('main_hero_slides', JSON.stringify(DEFAULT_TOP_SLIDES));
-    }
-
-    // 3. Charger les bannières du Méga Menu
-    const storedBanners = localStorage.getItem('category_banner_products');
-    if (storedBanners) {
-      try { setMenuBanners(JSON.parse(storedBanners)); }
-      catch (e) { console.error(e); }
-    }
-
-    // 5. Charger la configuration du footer
-    const storedFooter = localStorage.getItem('storefront_footer_config');
-    if (storedFooter) {
-      try { setFooterConfig(JSON.parse(storedFooter)); }
-      catch (e) { console.error(e); }
-    } else {
-      const defaultFooter = {
-        description: "Maison de haute couture et de maroquinerie d'exception. HA-KAVOD 97 incarne l'alliance parfaite de l'élégance intemporelle et du raffinement contemporain.",
-        phone: "0850 333 22 86",
-        email: "contact@hakavok.com",
-        socials: {
-          whatsapp: "https://wa.me/22507000000",
-          facebook: "https://facebook.com/hakavod97",
-          twitter: "https://twitter.com/hakavod97",
-          instagram: "https://instagram.com/hakavod97",
-          tiktok: "https://tiktok.com/@hakavod97"
-        },
-        country: "Côte d'Ivoire (XOF)",
-        columns: [
-          {
-            title: "Boutique",
-            links: [
-              { name: "Robes", url: "/catalog?category_id=1" },
-              { name: "Sacs", url: "/catalog?category_id=2" },
-              { name: "Chaussures", url: "/catalog?category_id=3" },
-              { name: "Accessoires", url: "/catalog?category_id=4" }
-            ]
-          },
-          {
-            title: "Aide",
-            links: [
-              { name: "Suivi de commande", url: "/order-tracking", icon: "track" },
-              { name: "Livraison & Retours", url: "#", icon: "return" },
-              { name: "F.A.Q", url: "#" }
-            ]
-          },
-          {
-            title: "Maison",
-            links: [
-              { name: "L'esprit de la Maison", url: "#" },
-              { name: "Notre engagement", url: "#" },
-              { name: "Services de Conciergerie", url: "#" }
-            ]
+          if (fullSlides.length > 0) {
+            const mappedTop = fullSlides.map((s, idx) => ({
+              id: s.id || `top-api-${idx}`,
+              type: s.secondary_image_url ? 'video' : 'image',
+              tag: s.label || '',
+              title_line1: s.title || '',
+              title_line2_italic: s.subtitle || '',
+              description: s.description || '',
+              image: s.image_url || '',
+              link_primary: s.cta_url || '',
+              link_primary_label: s.cta_text || 'Découvrir',
+              link_secondary: s.secondary_cta_url || '',
+              link_secondary_label: s.secondary_cta_text || '',
+              active: s.active !== false
+            }));
+            setTopSlides(mappedTop);
+            localStorage.setItem('main_hero_slides', JSON.stringify(mappedTop));
+          } else {
+            loadTopSlidesFallback();
           }
-        ]
-      };
-      setFooterConfig(defaultFooter);
-    }
+
+          if (splitSlides.length > 0) {
+            const mappedMiddle = splitSlides.map((s, idx) => ({
+              id: s.id || `split-api-${idx}`,
+              tag: s.label || '',
+              title: s.title || '',
+              subtitle: s.subtitle || '',
+              description: s.description || '',
+              price: s.price || 0,
+              old_price: s.compare_at_price || 0,
+              image: s.image_url || '',
+              link: s.cta_url || '',
+              active: s.active !== false
+            }));
+            setMiddleSlides(mappedMiddle);
+            localStorage.setItem('home_hero_slides', JSON.stringify(mappedMiddle));
+          } else {
+            loadMiddleSlidesFallback();
+          }
+          return;
+        }
+      } catch (e) {
+        console.warn("Échec de chargement des slides depuis l'API, utilisation du cache local.", e);
+      }
+
+      loadTopSlidesFallback();
+      loadMiddleSlidesFallback();
+    };
+
+    const loadTopSlidesFallback = () => {
+      const storedTop = localStorage.getItem('main_hero_slides');
+      if (storedTop) {
+        try { setTopSlides(JSON.parse(storedTop)); }
+        catch (e) { setTopSlides(DEFAULT_TOP_SLIDES); }
+      } else {
+        setTopSlides(DEFAULT_TOP_SLIDES);
+      }
+    };
+
+    const loadMiddleSlidesFallback = () => {
+      const storedMiddle = localStorage.getItem('home_hero_slides');
+      if (storedMiddle) {
+        try { setMiddleSlides(JSON.parse(storedMiddle)); }
+        catch (e) { setMiddleSlides(DEFAULT_SLIDES); }
+      } else {
+        setMiddleSlides(DEFAULT_SLIDES);
+      }
+    };
+
+    // 3. Charger les bannières du Méga Menu depuis l'API ou localement
+    const loadBanners = async () => {
+      try {
+        const res = await storeService.getMenuBanners();
+        if (res) {
+          const banners = res.data || res;
+          if (banners && typeof banners === 'object') {
+            setMenuBanners(banners);
+            localStorage.setItem('category_banner_products', JSON.stringify(banners));
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn("Échec du chargement des bannières depuis l'API, utilisation du cache local.", err);
+      }
+
+      const storedBanners = localStorage.getItem('category_banner_products');
+      if (storedBanners) {
+        try { setMenuBanners(JSON.parse(storedBanners)); }
+        catch (e) { console.error(e); }
+      }
+    };
+
+    // 5. Charger la configuration du footer depuis l'API ou le localStorage
+    const loadFooterConfig = async () => {
+      try {
+        const data = await storeService.getFooter();
+        if (data) {
+          const config = data.data || data;
+          if (config && (config.columns || config.description)) {
+            setFooterConfig(config);
+            localStorage.setItem('storefront_footer_config', JSON.stringify(config));
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn("Échec de récupération du footer depuis l'API, utilisation du cache local.", e);
+      }
+
+      const storedFooter = localStorage.getItem('storefront_footer_config');
+      if (storedFooter) {
+        try { setFooterConfig(JSON.parse(storedFooter)); }
+        catch (e) { console.error(e); }
+      } else {
+        const defaultFooter = {
+          description: "Maison de haute couture et de maroquinerie d'exception. HA-KAVOD 97 incarne l'alliance parfaite de l'élégance intemporelle et du raffinement contemporain.",
+          phone: "0850 333 22 86",
+          email: "contact@hakavok.com",
+          socials: {
+            whatsapp: "https://wa.me/22507000000",
+            facebook: "https://facebook.com/hakavod97",
+            twitter: "https://twitter.com/hakavod97",
+            instagram: "https://instagram.com/hakavod97",
+            tiktok: "https://tiktok.com/@hakavod97"
+          },
+          country: "Côte d'Ivoire (XOF)",
+          columns: [
+            {
+              title: "Boutique",
+              links: [
+                { name: "Robes", url: "/catalog?category_id=1" },
+                { name: "Sacs", url: "/catalog?category_id=2" },
+                { name: "Chaussures", url: "/catalog?category_id=3" },
+                { name: "Accessoires", url: "/catalog?category_id=4" }
+              ]
+            },
+            {
+              title: "Aide",
+              links: [
+                { name: "Suivi de commande", url: "/order-tracking", icon: "track" },
+                { name: "Livraison & Retours", url: "#", icon: "return" },
+                { name: "F.A.Q", url: "#" }
+              ]
+            },
+            {
+              title: "Maison",
+              links: [
+                { name: "L'esprit de la Maison", url: "#" },
+                { name: "Notre engagement", url: "#" },
+                { name: "Services de Conciergerie", url: "#" }
+              ]
+            }
+          ]
+        };
+        setFooterConfig(defaultFooter);
+      }
+    };
 
     // 4. Charger les catégories et produits de l'API
     const loadApiData = async () => {
@@ -272,10 +357,14 @@ export const HeroSlides = ({
         setLoadingData(false);
       }
     };
+
+    loadSlides();
+    loadBanners();
+    loadFooterConfig();
     loadApiData();
   }, []);
 
-  const handleSaveBanner = (categoryId, productId) => {
+  const handleSaveBanner = async (categoryId, productId) => {
     setBannerSaveStatus(prev => ({ ...prev, [categoryId]: 'saving' }));
     
     const updatedBanners = {
@@ -287,27 +376,45 @@ export const HeroSlides = ({
       delete updatedBanners[categoryId];
     }
     
-    setMenuBanners(updatedBanners);
-    localStorage.setItem('category_banner_products', JSON.stringify(updatedBanners));
-    
-    setTimeout(() => {
+    try {
+      setMenuBanners(updatedBanners);
+      localStorage.setItem('category_banner_products', JSON.stringify(updatedBanners));
+      
+      // Sauvegarder dans le backend via l'API
+      await adminService.updateMenuBanners(updatedBanners);
+      
       setBannerSaveStatus(prev => ({ ...prev, [categoryId]: 'saved' }));
+    } catch (err) {
+      console.error("Erreur de sauvegarde de la bannière sur le serveur", err);
+      // Fallback
+      setBannerSaveStatus(prev => ({ ...prev, [categoryId]: 'saved' }));
+    } finally {
       setTimeout(() => {
         setBannerSaveStatus(prev => ({ ...prev, [categoryId]: 'idle' }));
       }, 2000);
-    }, 450);
+    }
   };
 
-  const handleSaveFooter = (e) => {
+  const handleSaveFooter = async (e) => {
     e.preventDefault();
     setFooterSaveState('saving');
-    localStorage.setItem('storefront_footer_config', JSON.stringify(footerConfig));
-    setTimeout(() => {
+    try {
+      // 1. Sauvegarder localement dans localStorage
+      localStorage.setItem('storefront_footer_config', JSON.stringify(footerConfig));
+      
+      // 2. Envoyer la configuration au serveur backend via l'API
+      await adminService.updateFooterConfig(footerConfig);
+      
       setFooterSaveState('saved');
+    } catch (err) {
+      console.error("Erreur de sauvegarde du footer sur le serveur", err);
+      // Fallback : On indique quand même que c'est enregistré (car sauvegardé dans localStorage)
+      setFooterSaveState('saved');
+    } finally {
       setTimeout(() => {
         setFooterSaveState('idle');
       }, 2000);
-    }, 450);
+    }
   };
 
   const handleColumnTitleChange = (colIdx, value) => {
@@ -338,14 +445,57 @@ export const HeroSlides = ({
     setFooterConfig({ ...footerConfig, columns: updatedCols });
   };
 
-  // Sauvegarder dans localStorage
-  const saveSlidesData = (updated, section) => {
+  // Sauvegarder dans localStorage et sur le serveur API
+  const saveSlidesData = async (updated, section) => {
+    let currentTop = topSlides;
+    let currentMiddle = middleSlides;
+
     if (section === 'middle') {
       setMiddleSlides(updated);
       localStorage.setItem('home_hero_slides', JSON.stringify(updated));
+      currentMiddle = updated;
     } else {
       setTopSlides(updated);
       localStorage.setItem('main_hero_slides', JSON.stringify(updated));
+      currentTop = updated;
+    }
+
+    // Convertir au format attendu par le backend API
+    const apiTopSlides = currentTop.map(s => ({
+      id: s.id && !s.id.startsWith('top-') && !s.id.startsWith('default-') ? Number(s.id) : null,
+      layout: 'full',
+      label: s.tag || '',
+      title: s.title_line1 || '',
+      subtitle: s.title_line2_italic || '',
+      description: s.description || '',
+      image_url: s.image || '',
+      cta_url: s.link_primary || '',
+      cta_text: s.link_primary_label || '',
+      secondary_cta_url: s.link_secondary || '',
+      secondary_cta_text: s.link_secondary_label || '',
+      active: s.active !== false
+    }));
+
+    const apiMiddleSlides = currentMiddle.map(s => ({
+      id: s.id && !s.id.startsWith('middle-') && !s.id.startsWith('default-') ? Number(s.id) : null,
+      layout: 'split',
+      label: s.tag || '',
+      title: s.title || '',
+      subtitle: s.subtitle || '',
+      description: s.description || '',
+      price: s.price ? Number(s.price) : null,
+      compare_at_price: s.old_price ? Number(s.old_price) : null,
+      image_url: s.image || '',
+      cta_url: s.link || '',
+      active: s.active !== false
+    }));
+
+    const combinedSlides = [...apiTopSlides, ...apiMiddleSlides];
+
+    try {
+      await adminService.updateHomeSlides(combinedSlides);
+    } catch (err) {
+      console.error("Erreur de sauvegarde des slides sur le serveur", err);
     }
   };
 

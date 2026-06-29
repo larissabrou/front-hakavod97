@@ -7,6 +7,7 @@ import { useSettings } from '../../hooks/useSettings';
 import productService from '../../services/api/productService';
 import { adaptProduct } from './Catalog';
 import QuickAddModal from '../../components/product/QuickAddModal';
+import ProductCard from '../../components/product/ProductCard';
 
 
 
@@ -327,59 +328,9 @@ export const Cart = () => {
         {activeTab === 'deals' && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 animate-fade-in">
             {activeDeals.length > 0 ? (
-              activeDeals.map((product) => {
-                const isAdded = addedItems[product.id];
-                return (
-                  <div key={product.id} className="group flex flex-col bg-white border border-neutral-100 p-3 hover:shadow-xs transition-shadow relative">
-                    {/* Image */}
-                    <Link to={`/product/${product.id}`} className="aspect-[3/4] bg-neutral-100 overflow-hidden relative mb-3 block">
-                      <img 
-                        src={product.image || '/logo.png'} 
-                        alt={product.name} 
-                        className="w-full h-full object-cover transition-transform duration-550 group-hover:scale-105" 
-                      />
-                      {product.old_price && (
-                        <span className="absolute top-2 left-2 bg-red-655 text-white font-bold text-[9px] px-2 py-0.5 uppercase tracking-wider">
-                          -{Math.round(((product.old_price - product.price) / product.old_price) * 100)}%
-                        </span>
-                      )}
-                    </Link>
-
-                    {/* Brand & Name */}
-                    <span className="text-[8.5px] font-bold tracking-widest text-neutral-400 uppercase mb-0.5">Ha-Kavod 97</span>
-                    <h4 className="text-xs font-semibold text-neutral-800 line-clamp-1 mb-2">
-                      <Link to={`/product/${product.id}`} className="hover:underline">
-                        {product.name}
-                      </Link>
-                    </h4>
-
-                    {/* Price */}
-                    <div className="flex items-baseline gap-2 mb-3">
-                      <span className="text-sm font-black text-neutral-900">
-                        {formatPrice(product.price)}
-                      </span>
-                      {product.old_price && (
-                        <span className="text-[11px] text-neutral-400 font-medium line-through">
-                          {formatPrice(product.old_price)}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Add Button */}
-                    <button
-                      onClick={() => handleAddProduct(product)}
-                      disabled={isAdded}
-                      className={`w-full py-2 text-[10px] font-bold uppercase tracking-wider transition-colors text-center border ${
-                        isAdded 
-                          ? 'bg-emerald-50 border-emerald-250 text-emerald-600' 
-                          : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-950 hover:text-white hover:border-neutral-955'
-                      }`}
-                    >
-                      {isAdded ? c.added : c.add_to_cart_short}
-                    </button>
-                  </div>
-                );
-              })
+              activeDeals.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))
             ) : (
               <div className="col-span-full flex flex-col items-center justify-center p-12 border border-dashed border-neutral-200 text-center opacity-50 rounded-sm">
                 <span className="text-neutral-400 font-bold uppercase text-[10px] tracking-wider font-sans">
@@ -394,47 +345,7 @@ export const Cart = () => {
             {activeRecent.length > 0 ? (
               activeRecent.map((product) => {
                 if (!product || !product.id) return null;
-                const isAdded = addedItems[product.id];
-                return (
-                  <div key={product.id} className="group flex flex-col bg-white border border-neutral-100 p-3 hover:shadow-xs transition-shadow relative">
-                    {/* Image */}
-                    <Link to={`/product/${product.id}`} className="aspect-[3/4] bg-neutral-100 overflow-hidden relative mb-3 block">
-                      <img 
-                        src={product.image || '/logo.png'} 
-                        alt={product.name} 
-                        className="w-full h-full object-cover transition-transform duration-550 group-hover:scale-105" 
-                      />
-                    </Link>
- 
-                    {/* Brand & Name */}
-                    <span className="text-[8.5px] font-bold tracking-widest text-neutral-400 uppercase mb-0.5">Ha-Kavod 97</span>
-                    <h4 className="text-xs font-semibold text-neutral-800 line-clamp-1 mb-2">
-                      <Link to={`/product/${product.id}`} className="hover:underline">
-                        {product.name}
-                      </Link>
-                    </h4>
- 
-                    {/* Price */}
-                    <div className="flex items-baseline gap-2 mb-3">
-                      <span className="text-sm font-black text-neutral-900">
-                        {formatPrice(product.price)}
-                      </span>
-                    </div>
- 
-                    {/* Add Button */}
-                    <button
-                      onClick={() => handleAddProduct(product)}
-                      disabled={isAdded}
-                      className={`w-full py-2 text-[10px] font-bold uppercase tracking-wider transition-colors text-center border ${
-                        isAdded 
-                          ? 'bg-emerald-50 border-emerald-250 text-emerald-600' 
-                          : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-950 hover:text-white hover:border-neutral-955'
-                      }`}
-                    >
-                      {isAdded ? c.added : c.add_to_cart_short}
-                    </button>
-                  </div>
-                );
+                return <ProductCard key={product.id} product={product} />;
               })
             ) : (
               <div className="col-span-full flex flex-col items-center justify-center p-12 border border-dashed border-neutral-200 text-center opacity-50 rounded-sm">

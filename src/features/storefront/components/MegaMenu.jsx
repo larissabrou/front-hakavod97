@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Sparkles, BookOpen, Package } from 'lucide-react';
 import productService from '../../../services/api/productService';
+import storeService from '../../../services/api/storeService';
 import { useSettings } from '../../../hooks/useSettings';
+import ProductLoader from '../../../components/ui/ProductLoader';
 
 const CATEGORY_TRANSLATIONS = {
   "robes": "Dresses",
@@ -121,6 +123,7 @@ export const MegaMenu = ({ isTransparent }) => {
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [products, setProducts] = useState([]);
   const [activeCategory, setActiveCategory] = useState(null);
+  const [menuBanners, setMenuBanners] = useState({});
   const { activeLocale } = useSettings();
 
   useEffect(() => {
@@ -145,8 +148,33 @@ export const MegaMenu = ({ isTransparent }) => {
         console.error("Échec de chargement des produits pour le MegaMenu.", err);
       }
     };
+    const loadBanners = async () => {
+      try {
+        const res = await storeService.getMenuBanners();
+        if (res) {
+          const banners = res.data || res;
+          if (banners && typeof banners === 'object') {
+            setMenuBanners(banners);
+            localStorage.setItem('category_banner_products', JSON.stringify(banners));
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn("Échec du chargement des bannières depuis l'API, utilisation du cache local.", err);
+      }
+      
+      const storedSelections = localStorage.getItem('category_banner_products');
+      if (storedSelections) {
+        try {
+          setMenuBanners(JSON.parse(storedSelections));
+        } catch (e) {
+          console.error("Erreur parsing category_banner_products", e);
+        }
+      }
+    };
     loadCategories();
     loadProducts();
+    loadBanners();
   }, []);
 
   const displayCategories = categories;
@@ -157,9 +185,7 @@ export const MegaMenu = ({ isTransparent }) => {
       onMouseLeave={() => setActiveCategory(null)}
     >
       {isLoadingCategories ? (
-        <div className="text-sm text-neutral-500 uppercase tracking-wider">
-          {activeLocale === 'en' ? "Loading categories..." : "Chargement des catégories..."}
-        </div>
+        <ProductLoader text={activeLocale === 'en' ? "Loading categories..." : "Chargement des catégories..."} compact={true} />
       ) : displayCategories.length === 0 ? (
         <div className="text-sm text-neutral-500 uppercase tracking-wider">
           {activeLocale === 'en' ? "No categories available at the moment." : "Aucune catégorie disponible pour le moment."}
@@ -250,17 +276,8 @@ export const MegaMenu = ({ isTransparent }) => {
 
           {/* Section Image Promotionnelle */}
           {(() => {
-            // Lire les configurations des bannières personnalisées
-            const storedSelections = localStorage.getItem('category_banner_products');
-            let selectedProductId = null;
-            if (storedSelections) {
-              try {
-                const parsed = JSON.parse(storedSelections);
-                selectedProductId = parsed[activeCategory.id];
-              } catch (e) {
-                console.error("Erreur parsing category_banner_products", e);
-              }
-            }
+            // Lire les configurations des bannières personnalisées depuis l'état
+            const selectedProductId = menuBanners[activeCategory.id];
 
             // Trouver le produit correspondant
             let categoryProduct = null;

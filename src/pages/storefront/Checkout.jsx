@@ -379,6 +379,7 @@ export const Checkout = () => {
   const [paymentPhone, setPaymentPhone] = useState('');
   const [paymentPhoneDirty, setPaymentPhoneDirty] = useState(false);
   const [savedAddresses, setSavedAddresses] = useState([]);
+  const [localAddresses, setLocalAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState('');
 
   // Card payment form states
@@ -519,9 +520,13 @@ export const Checkout = () => {
       lastname,
       address: addr.shipping_address || '',
       phone: addr.customer_phone || '',
+      email: addr.customer_email || addr.email || prev.email || '',
     }));
     
-    if (addr.commune_id) {
+    const country = addr.country || (addr.commune_id ? 'CI' : 'OTHER');
+    setDeliveryCountry(country);
+    
+    if (country === 'CI' && addr.commune_id) {
       try {
         const comRes = await geoService.getCommunes();
         const allComs = comRes.data || comRes || [];
@@ -533,11 +538,25 @@ export const Checkout = () => {
       } catch (e) {
         console.warn("Failed to resolve commune region on prefill:", e);
       }
+    } else {
+      setSelectedRegion('');
+      setSelectedCommune('');
     }
   };
 
-  // Load saved addresses for logged-in clients
+  // Load saved addresses for logged-in clients + local addresses
   useEffect(() => {
+    let loadedLocals = [];
+    try {
+      const stored = localStorage.getItem('hakavod_saved_addresses');
+      if (stored) {
+        loadedLocals = JSON.parse(stored);
+        setLocalAddresses(loadedLocals);
+      }
+    } catch (e) {
+      console.warn("Failed to load local addresses:", e);
+    }
+
     if (isAuthenticated) {
       const loadAddresses = async () => {
         try {
@@ -548,12 +567,24 @@ export const Checkout = () => {
             const defAddr = list.find(a => a.is_default) || list[0];
             setSelectedAddressId(defAddr.id);
             prefillFormWithAddress(defAddr);
+          } else if (loadedLocals.length > 0) {
+            setSelectedAddressId(loadedLocals[0].id);
+            prefillFormWithAddress(loadedLocals[0]);
           }
         } catch (err) {
           console.warn("Failed to load customer addresses:", err);
+          if (loadedLocals.length > 0) {
+            setSelectedAddressId(loadedLocals[0].id);
+            prefillFormWithAddress(loadedLocals[0]);
+          }
         }
       };
       loadAddresses();
+    } else {
+      if (loadedLocals.length > 0) {
+        setSelectedAddressId(loadedLocals[0].id);
+        prefillFormWithAddress(loadedLocals[0]);
+      }
     }
   }, [isAuthenticated]);
 
@@ -765,6 +796,42 @@ export const Checkout = () => {
       const errorMessage = res?.message || res?.data?.message || res?.data?.data?.message;
 
       if (orderResult?.reference) {
+        // Enregistrer l'adresse localement dans tous les cas pour la prochaine fois
+        try {
+          const stored = localStorage.getItem('hakavod_saved_addresses');
+          const savedLocals = stored ? JSON.parse(stored) : [];
+          
+          const activeRegionObj = regions.find(r => String(r.id) === String(selectedRegion));
+          const activeCommuneObj = communes.find(c => String(c.id) === String(selectedCommune));
+          const regionName = activeRegionObj ? activeRegionObj.name : '';
+          const communeName = activeCommuneObj ? activeCommuneObj.name : '';
+
+          const currentProfile = {
+            id: 'local_' + Date.now(),
+            customer_name: `${formData.firstname} ${formData.lastname}`,
+            customer_phone: formData.phone,
+            customer_email: formData.email,
+            shipping_address: formData.address,
+            country: deliveryCountry,
+            region: deliveryCountry === 'CI' ? regionName : '',
+            commune: deliveryCountry === 'CI' ? communeName : '',
+            commune_id: deliveryCountry === 'CI' ? (selectedCommune ? Number(selectedCommune) : null) : null,
+          };
+          
+          const exists = savedLocals.some(a => 
+            (a.shipping_address || '').trim().toLowerCase() === currentProfile.shipping_address.trim().toLowerCase() &&
+            (a.customer_phone || '').trim() === currentProfile.customer_phone.trim() &&
+            (a.customer_name || '').trim().toLowerCase() === currentProfile.customer_name.trim().toLowerCase()
+          );
+          
+          if (!exists) {
+            savedLocals.unshift(currentProfile);
+            localStorage.setItem('hakavod_saved_addresses', JSON.stringify(savedLocals.slice(0, 5)));
+          }
+        } catch (e) {
+          console.warn("Failed to save address to localStorage:", e);
+        }
+
         // Save customer address as default on success
         if (isAuthenticated) {
           try {
@@ -780,12 +847,20 @@ export const Checkout = () => {
             );
 
             if (!alreadyExists) {
+              const activeRegionObj = regions.find(r => String(r.id) === String(selectedRegion));
+              const activeCommuneObj = communes.find(c => String(c.id) === String(selectedCommune));
+              const regionName = activeRegionObj ? activeRegionObj.name : '';
+              const communeName = activeCommuneObj ? activeCommuneObj.name : '';
+
               customerService.addAddress({
                 label: `Checkout ${new Date().toLocaleDateString()}`,
                 customer_name: `${formData.firstname} ${formData.lastname}`,
                 customer_phone: formData.phone,
                 shipping_address: formData.address,
-                commune_id: selectedCommune ? Number(selectedCommune) : null,
+                country: deliveryCountry,
+                region: deliveryCountry === 'CI' ? regionName : '',
+                commune: deliveryCountry === 'CI' ? communeName : '',
+                commune_id: deliveryCountry === 'CI' ? (selectedCommune ? Number(selectedCommune) : null) : null,
                 is_default: true
               }).catch(err => console.warn("Failed to save new address:", err));
             } else {
@@ -969,13 +1044,16 @@ export const Checkout = () => {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Vos adresses enregistrées - Style Defacto */}
-              {isAuthenticated && savedAddresses.length > 0 && (
+              {(savedAddresses.length > 0 || localAddresses.length > 0) && (
                 <div className="md:col-span-2 flex flex-col gap-3 text-left mb-4">
                   <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
-                    Vos adresses de livraison enregistrées
+                    Vos adresses de livraison enregistrées / précédentes
                   </label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                    {savedAddresses.map((a) => {
+                    {[
+                      ...savedAddresses.map(a => ({ ...a, isLocal: false })),
+                      ...localAddresses.map(a => ({ ...a, isLocal: true }))
+                    ].map((a) => {
                       const isSelected = String(selectedAddressId) === String(a.id);
                       return (
                         <div
@@ -991,14 +1069,21 @@ export const Checkout = () => {
                           }`}
                         >
                           <div className="flex justify-between items-start gap-2">
-                            <span className="text-[11px] font-bold text-neutral-800 truncate block max-w-[80%]">
+                            <span className="text-[11px] font-bold text-neutral-800 truncate block max-w-[65%]">
                               {a.customer_name}
                             </span>
-                            {a.is_default && (
-                              <span className="bg-neutral-100 text-neutral-600 text-[8px] font-bold uppercase px-1 py-0.5 tracking-wider shrink-0">
-                                Défaut
-                              </span>
-                            )}
+                            <div className="flex gap-1 shrink-0">
+                              {a.is_default && (
+                                <span className="bg-neutral-100 text-neutral-600 text-[8px] font-bold uppercase px-1 py-0.5 tracking-wider">
+                                  Défaut
+                                </span>
+                              )}
+                              {a.isLocal && (
+                                <span className="bg-neutral-100 text-neutral-500 text-[8px] font-medium px-1 py-0.5 tracking-wider">
+                                  Local
+                                </span>
+                              )}
+                            </div>
                           </div>
                           <div className="text-[10px] text-neutral-500 font-semibold mt-1.5 leading-relaxed break-words line-clamp-2">
                             {a.shipping_address}
@@ -1025,7 +1110,9 @@ export const Checkout = () => {
                           lastname: '',
                           address: '',
                           phone: '',
+                          email: '',
                         }));
+                        setDeliveryCountry('CI');
                         setSelectedRegion('');
                         setSelectedCommune('');
                       }}
