@@ -3,7 +3,7 @@ import { useSettings } from '../../hooks/useSettings';
 
 const SHARED_STYLES = `
   .luxury-page { --bordeaux: #7B1E2E; --or: #C9963A; --noir: #0C0A09; --ivoire: #F5ECD8; background-color: var(--noir) !important; color: var(--ivoire) !important; font-family: 'Montserrat', sans-serif !important; font-weight: 300 !important; text-align: left; }
-  .luxury-page .wrap { max-width: 860px; margin: 0 auto; padding: 40px 24px 100px; }
+  .luxury-page .wrap { max-width: 95%; margin: 0 auto; padding: 40px 24px 100px; }
   .luxury-page .eyebrow { font-size: 9px; letter-spacing: 6px; text-transform: uppercase; color: var(--or); margin-bottom: 18px; display: flex; align-items: center; gap: 14px; }
   .luxury-page .eyebrow::before { content: ''; width: 28px; height: 1px; background: var(--or); }
   .luxury-page h1 { font-family: 'Cinzel', serif !important; font-weight: 400 !important; font-size: clamp(28px, 5vw, 52px) !important; color: var(--ivoire) !important; line-height: 1.2 !important; margin-bottom: 12px !important; }

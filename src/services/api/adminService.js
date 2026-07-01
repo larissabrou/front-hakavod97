@@ -83,6 +83,15 @@ export const adminService = {
     return response.data;
   },
 
+  uploadProductHeroImage: async (id, formData) => {
+    const response = await apiClient.post(`/admin/products/${id}/hero-image`, formData, {
+      headers: {
+        'Content-Type': undefined,
+      },
+    });
+    return response.data;
+  },
+
   deleteProductImage: async (id, imageId) => {
     const response = await apiClient.delete(`/admin/products/${id}/images/${imageId}`);
     return response.data;
@@ -241,9 +250,131 @@ export const adminService = {
     return response.data;
   },
 
-  // Sauvegarder les slides de la page d'accueil
+  // Récupérer les paramètres du footer
+  getFooterSettings: async () => {
+    const response = await apiClient.get('/admin/footer-settings');
+    return response.data;
+  },
+
+  // Mettre à jour les paramètres du footer
+  updateFooterSettings: async (data) => {
+    const response = await apiClient.put('/admin/footer-settings', data);
+    return response.data;
+  },
+
+  // Uploader une image pour la page d'accueil (slides)
+  uploadHomeImage: async (formData) => {
+    const response = await apiClient.post('/admin/home-images/upload', formData, {
+      headers: { 'Content-Type': undefined },
+    });
+    return response.data;
+  },
+
+  // Récupérer les slides de la page d'accueil
+  getHomeSlides: async () => {
+    const response = await apiClient.get('/admin/home-slides');
+    return response.data;
+  },
+
+  // Sauvegarder les slides de la page d'accueil (Bulk - obsolète si l'API est REST)
   updateHomeSlides: async (slides) => {
     const response = await apiClient.post('/admin/home-slides', { slides });
+    return response.data;
+  },
+
+  // Ajouter un slide (REST)
+  addHomeSlide: async (data) => {
+    const response = await apiClient.post('/admin/home-slides', data);
+    return response.data;
+  },
+
+  // Modifier un slide (REST)
+  updateHomeSlide: async (id, data) => {
+    const response = await apiClient.put(`/admin/home-slides/${id}`, data);
+    return response.data;
+  },
+
+  // Supprimer un slide (REST)
+  deleteHomeSlide: async (id) => {
+    const response = await apiClient.delete(`/admin/home-slides/${id}`);
+    return response.data;
+  },
+
+  // Uploader une image pour un slide (REST)
+  uploadHomeSlideImage: async (id, formData) => {
+    const response = await apiClient.post(`/admin/home-slides/${id}/image`, formData, {
+      headers: {
+        'Content-Type': undefined,
+      },
+    });
+    return response.data;
+  },
+
+  // --- NOUVEAUX ENDPOINTS DE LA PAGE D'ACCUEIL ---
+
+  // Produits à la une (Sections Promo)
+  getHomeFeaturedProducts: async () => {
+    const response = await apiClient.get('/admin/home-featured-products');
+    return response.data;
+  },
+
+  addHomeFeaturedProduct: async (data) => {
+    const response = await apiClient.post('/admin/home-featured-products', data);
+    return response.data;
+  },
+
+  updateHomeFeaturedProduct: async (id, data) => {
+    console.log('[API] PUT home-featured-products/' + id, JSON.stringify(data, null, 2));
+    const response = await apiClient.put(`/admin/home-featured-products/${id}`, data);
+    console.log('[API] Response:', JSON.stringify(response.data, null, 2));
+    return response.data;
+  },
+
+  deleteHomeFeaturedProduct: async (id) => {
+    const response = await apiClient.delete(`/admin/home-featured-products/${id}`);
+    return response.data;
+  },
+
+  reorderHomeFeaturedProducts: async (featuredIds) => {
+    const response = await apiClient.put('/admin/home-featured-products/reorder', { featured_ids: featuredIds });
+    return response.data;
+  },
+
+  // Blocs éditoriaux (Artisanat)
+  getHomeBlocks: async () => {
+    const response = await apiClient.get('/admin/home-blocks');
+    return response.data;
+  },
+
+  createHomeBlock: async (data) => {
+    const response = await apiClient.post('/admin/home-blocks', data);
+    return response.data;
+  },
+
+  updateHomeBlock: async (id, data) => {
+    const response = await apiClient.put(`/admin/home-blocks/${id}`, data);
+    return response.data;
+  },
+
+  deleteHomeBlock: async (id) => {
+    const response = await apiClient.delete(`/admin/home-blocks/${id}`);
+    return response.data;
+  },
+
+  uploadHomeBlockImage: async (id, formData) => {
+    const response = await apiClient.post(`/admin/home-blocks/${id}/image`, formData, {
+      headers: { 'Content-Type': undefined },
+    });
+    return response.data;
+  },
+
+  deleteHomeBlockImage: async (id) => {
+    const response = await apiClient.delete(`/admin/home-blocks/${id}/image`);
+    return response.data;
+  },
+
+  reorderHomeBlocks: async (blockIds) => {
+    const response = await apiClient.put('/admin/home-blocks/reorder', { block_ids: blockIds });
     return response.data;
   },
 

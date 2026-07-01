@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ShoppingBag, Heart, ShieldCheck, Truck, RotateCcw, CheckCircle } from 'lucide-react';
+import { ShoppingBag, Heart, ShieldCheck, Truck, RotateCcw, CheckCircle, ChevronDown, ChevronUp, Ruler } from 'lucide-react';
 import { useCart } from '../../hooks/useCart';
 import { useSettings } from '../../hooks/useSettings';
 import { useFavorites } from '../../hooks/useFavorites';
@@ -10,81 +10,83 @@ import { adaptProduct } from './Catalog';
 import ProductLoader from '../../components/ui/ProductLoader';
 import { translateColor } from '../../services/translations';
 
-const MOCK_PRODUCT = {
-  id: 1,
-  name: 'Derby Oxford Cuir Grainé',
-  slug: 'derby-oxford-cuir-graine',
-  price: 125000,
-  old_price: 150000,
-  brand: 'Ha-Kavod 97',
-  description: 'L\'élégance à l\'état pur. Confectionné en cuir grainé pleine fleur, ce Derby Oxford incarne la sobriété raffinée qui définit Ha-Kavod 97. La semelle en cuir et la doublure intérieure garantissent un confort incomparable.',
-  colors: [
-    { name: 'Bordeaux', code: '#540C14' },
-    { name: 'Noir', code: '#17070A' },
-    { name: 'Or', code: '#C5A059' }
-  ],
-  sizes: ['39', '40', '41', '42', '43', '44'],
-  images: [
-    'https://images.unsplash.com/photo-1614252235316-8c857d38b5f4?w=600&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1551028719-00167b16eac5?w=600&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1578932750294-f5075e85f44a?w=600&auto=format&fit=crop&q=80'
-  ],
-  variants: [
-    { id: 101, color: { name: 'Bordeaux', hex_code: '#540C14' }, size: { name: '40' }, stock: 5 },
-    { id: 102, color: { name: 'Noir', hex_code: '#17070A' }, size: { name: '40' }, stock: 3 },
-    { id: 103, color: { name: 'Or', hex_code: '#C5A059' }, size: { name: '40' }, stock: 2 }
-  ]
-};
-
 const CONTENT = {
   fr: {
     notify_alert_success: "Votre demande d'alerte a bien été enregistrée.",
     loading_product_detail: "Chargement de la fiche produit...",
-    product_load_error: "Impossible de charger le produit depuis l'API. Vérifiez la connexion backend.",
+    product_load_error: "Impossible de charger le produit depuis l'API.",
     return_to_catalog: "Retour au catalogue",
     product_not_found: "Le produit demandé n'existe pas.",
     collection: "Collection",
     view_in_color: "Voir en {color}",
-    stock_very_limited: "Stock très limité !",
-    hurry_only_items_left: "Dépêchez-vous ! Plus que {count} article{plural} disponible{plural} dans cette taille/couleur.",
-    out_of_stock_desc: "Cet article n'est plus disponible dans cette combinaison de taille et de couleur.",
+    hurry_only_items_left: "Plus que {count} article{plural} disponible{plural}",
+    out_of_stock_desc: "Cet article n'est plus disponible dans cette combinaison.",
     notify_stock_return: "M'avertir du retour en stock",
-    notify_stock_desc: "Laissez-nous votre adresse e-mail ou numéro de téléphone et nous vous préviendrons en priorité dès que la taille {size} en {color} sera de retour.",
-    notify_stock_success: "Parfait ! Nous vous enverrons une notification dès le retour en stock.",
+    notify_stock_desc: "Laissez votre e-mail ou téléphone pour être prévenu dès que la taille {size} en {color} est disponible.",
+    notify_stock_success: "Parfait ! Notification activée dès le retour en stock.",
     email_or_phone_placeholder: "Votre e-mail ou téléphone",
     validate: "Valider",
-    in_stock_count_delivery: "En stock : {count} articles disponibles (Livraison rapide)",
-    in_stock_single_delivery: "En stock : 1 article disponible (Livraison rapide)",
+    in_stock_msg: "En stock — Expédition sous 24h",
     remove_from_favorites: "Retirer des favoris",
     add_to_favorites: "Ajouter aux favoris",
-    free_delivery_terms: "Livraison Standard gratuite dès 35 000 F CFA (50 €) d'achat",
+    free_delivery_terms: "Livraison Standard gratuite dès 35 000 F CFA d'achat",
     free_returns_terms: "Retours gratuits sous 30 jours",
-    secure_payment_terms: "Paiement sécurisé et crypté SSL"
+    secure_payment_terms: "Paiement sécurisé et crypté SSL",
+    description_label: "Description",
+    delivery_label: "Livraison & Retours",
+    out_of_stock_label: "Rupture de stock",
   },
   en: {
     notify_alert_success: "Your alert request has been successfully registered.",
     loading_product_detail: "Loading product details...",
-    product_load_error: "Unable to load product from the API. Check backend connection.",
+    product_load_error: "Unable to load product from the API.",
     return_to_catalog: "Return to catalog",
     product_not_found: "The requested product does not exist.",
     collection: "Collection",
     view_in_color: "View in {color}",
-    stock_very_limited: "Very limited stock!",
-    hurry_only_items_left: "Hurry up! Only {count} item{plural} left in this size/color.",
+    hurry_only_items_left: "Only {count} item{plural} left",
     out_of_stock_desc: "This item is no longer available in this size and color combination.",
     notify_stock_return: "Notify me when back in stock",
-    notify_stock_desc: "Leave us your email address or phone number and we will notify you as a priority as soon as size {size} in {color} is back.",
-    notify_stock_success: "Perfect! We will send you a notification when it is back in stock.",
+    notify_stock_desc: "Leave your email or phone and we'll notify you when size {size} in {color} is back.",
+    notify_stock_success: "Perfect! We'll notify you when it's back in stock.",
     email_or_phone_placeholder: "Your email or phone",
     validate: "Submit",
-    in_stock_count_delivery: "In stock: {count} items available (Fast delivery)",
-    in_stock_single_delivery: "In stock: 1 item available (Fast delivery)",
+    in_stock_msg: "In stock — Ships within 24h",
     remove_from_favorites: "Remove from favorites",
     add_to_favorites: "Add to favorites",
-    free_delivery_terms: "Free Standard delivery on orders over 35,000 F CFA (50 €)",
+    free_delivery_terms: "Free Standard delivery on orders over 35,000 F CFA",
     free_returns_terms: "Free returns within 30 days",
-    secure_payment_terms: "Secure and SSL-encrypted payment"
+    secure_payment_terms: "Secure and SSL-encrypted payment",
+    description_label: "Description",
+    delivery_label: "Delivery & Returns",
+    out_of_stock_label: "Out of stock",
   }
+};
+
+/* ── Accordion ── */
+const Accordion = ({ label, children, defaultOpen = false }) => {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="border-t border-neutral-200">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between py-4 text-left group cursor-pointer"
+      >
+        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-600 group-hover:text-primary transition-colors">
+          {label}
+        </span>
+        {open
+          ? <ChevronUp className="w-3.5 h-3.5 text-accent shrink-0" />
+          : <ChevronDown className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+        }
+      </button>
+      {open && (
+        <div className="pb-5 text-[13px] text-neutral-500 leading-relaxed">
+          {children}
+        </div>
+      )}
+    </div>
+  );
 };
 
 export const ProductDetail = () => {
@@ -105,20 +107,15 @@ export const ProductDetail = () => {
   const [quantity, setQuantity] = useState(1);
   const [error, setError] = useState('');
   const [isDemoMode, setIsDemoMode] = useState(false);
-
   const [notifyContact, setNotifyContact] = useState('');
   const [isNotifySubmitted, setIsNotifySubmitted] = useState(false);
   const notifyInputRef = useRef(null);
 
   useEffect(() => {
-    if (customerUser) {
-      setNotifyContact(customerUser.email || customerUser.phone || '');
-    }
+    if (customerUser) setNotifyContact(customerUser.email || customerUser.phone || '');
   }, [customerUser]);
 
-  useEffect(() => {
-    setIsNotifySubmitted(false);
-  }, [selectedSize, selectedColor]);
+  useEffect(() => { setIsNotifySubmitted(false); }, [selectedSize, selectedColor]);
 
   const handleNotifyClick = () => {
     if (notifyInputRef.current) {
@@ -130,102 +127,48 @@ export const ProductDetail = () => {
   const handleNotifySubmit = (e) => {
     e.preventDefault();
     if (!notifyContact) return;
-
-    const requestKey = `notify_stock_${product.id}_${selectedColor}_${selectedSize}`;
-    const date = new Date().toISOString();
-    const payload = {
-      contact: notifyContact,
-      date,
-      variantId: selectedVariant?.id
-    };
-    localStorage.setItem(requestKey, JSON.stringify(payload));
-
-    // Also append to global stock_notifications list for Admin Dashboard management
+    const key = `notify_stock_${product.id}_${selectedColor}_${selectedSize}`;
+    localStorage.setItem(key, JSON.stringify({ contact: notifyContact, date: new Date().toISOString(), variantId: selectedVariant?.id }));
     try {
-      const storedList = localStorage.getItem('stock_notifications');
-      let list = [];
-      if (storedList) {
-        list = JSON.parse(storedList);
-      }
-      // Check if we already have this identical request to avoid duplicates
-      const isDuplicate = list.some(
-        item => item.product_id === product.id &&
-                item.color === selectedColor &&
-                item.size === selectedSize &&
-                item.contact.trim().toLowerCase() === notifyContact.trim().toLowerCase()
-      );
-      if (!isDuplicate) {
-        list.push({
-          id: Date.now() + Math.random().toString(36).substr(2, 5),
-          product_id: product.id,
-          product_name: product.name || product.title || 'Produit',
-          color: selectedColor,
-          size: selectedSize,
-          contact: notifyContact,
-          date,
-          status: 'pending' // pending, notified
-        });
+      const list = JSON.parse(localStorage.getItem('stock_notifications') || '[]');
+      const dup = list.some(i => i.product_id === product.id && i.color === selectedColor && i.size === selectedSize && i.contact.toLowerCase() === notifyContact.toLowerCase());
+      if (!dup) {
+        list.push({ id: Date.now(), product_id: product.id, product_name: product.name, color: selectedColor, size: selectedSize, contact: notifyContact, date: new Date().toISOString(), status: 'pending' });
         localStorage.setItem('stock_notifications', JSON.stringify(list));
       }
-    } catch (err) {
-      console.error("Failed to save global stock notification:", err);
-    }
-
+    } catch (_) {}
     setIsNotifySubmitted(true);
-    showToast(c.notify_alert_success, "success");
+    showToast(c.notify_alert_success, 'success');
   };
 
-  const selectedVariant = product?.variants?.find(v => {
-    const vColor = v.color?.name || v.color;
-    const vSize = v.size?.name || v.size;
-    return vColor === selectedColor && vSize === selectedSize;
-  });
+  const selectedVariant = product?.variants?.find(v =>
+    (v.color?.name || v.color) === selectedColor && (v.size?.name || v.size) === selectedSize
+  );
   const maxStock = selectedVariant ? Number(selectedVariant.stock) : 0;
 
   const getSizeStock = (sizeName) => {
-    const variant = product?.variants?.find(v => {
-      const vColor = v.color?.name || v.color;
-      const vSize = v.size?.name || v.size;
-      return vColor === selectedColor && vSize === sizeName;
-    });
-    return variant ? Number(variant.stock) : 0;
+    const v = product?.variants?.find(v =>
+      (v.color?.name || v.color) === selectedColor && (v.size?.name || v.size) === sizeName
+    );
+    return v ? Number(v.stock) : 0;
   };
 
   useEffect(() => {
     if (product && selectedColor && selectedSize) {
-      const variant = product.variants?.find(v => {
-        const vColor = v.color?.name || v.color;
-        const vSize = v.size?.name || v.size;
-        return vColor === selectedColor && vSize === selectedSize;
-      });
-      const stock = variant ? Number(variant.stock) : 0;
-      if (stock <= 0) {
-        setQuantity(0);
-      } else {
-        setQuantity(1);
-      }
+      const v = product.variants?.find(v =>
+        (v.color?.name || v.color) === selectedColor && (v.size?.name || v.size) === selectedSize
+      );
+      setQuantity(v && Number(v.stock) > 0 ? 1 : 0);
     }
   }, [selectedColor, selectedSize, product]);
 
-  // S'assurer de sélectionner une taille disponible si la couleur change et que la taille actuelle est en rupture
   useEffect(() => {
     if (product && selectedColor) {
-      const colorVariants = product.variants?.filter(v => {
-        const vColor = v.color?.name || v.color;
-        return vColor === selectedColor;
-      }) || [];
-      
-      const currentVariant = colorVariants.find(v => {
-        const vSize = v.size?.name || v.size;
-        return vSize === selectedSize;
-      });
-      
-      if (!currentVariant || Number(currentVariant.stock) <= 0) {
-        const firstAvailableVariant = colorVariants.find(v => Number(v.stock) > 0);
-        if (firstAvailableVariant) {
-          const newSize = firstAvailableVariant.size?.name || firstAvailableVariant.size;
-          setSelectedSize(newSize);
-        }
+      const cvs = product.variants?.filter(v => (v.color?.name || v.color) === selectedColor) || [];
+      const cur = cvs.find(v => (v.size?.name || v.size) === selectedSize);
+      if (!cur || Number(cur.stock) <= 0) {
+        const first = cvs.find(v => Number(v.stock) > 0);
+        if (first) setSelectedSize(first.size?.name || first.size);
       }
     }
   }, [selectedColor, product]);
@@ -238,40 +181,29 @@ export const ProductDetail = () => {
         const apiProduct = res?.data ?? res;
         if (apiProduct) {
           const adapted = adaptProduct(apiProduct);
-          
-          // Parse color links from description
           const rawDesc = adapted.description || '';
           const match = rawDesc.match(/<!--color_links:([\s\S]*?)-->/);
           let parsedLinks = [];
           let cleanDesc = rawDesc;
           if (match) {
-            try {
-              parsedLinks = JSON.parse(match[1]);
-              cleanDesc = rawDesc.replace(/<!--color_links:[\s\S]*?-->/, '').trim();
-            } catch (e) {
-              console.error("Failed to parse color links:", e);
-            }
+            try { parsedLinks = JSON.parse(match[1]); cleanDesc = rawDesc.replace(/<!--color_links:[\s\S]*?-->/, '').trim(); }
+            catch (e) { console.error('Failed to parse color links:', e); }
           }
           adapted.description = cleanDesc;
           adapted.colorLinks = parsedLinks;
-
           setProduct(adapted);
           setIsDemoMode(false);
-
-          // Save to recently viewed
           try {
             const viewed = JSON.parse(localStorage.getItem('recently_viewed_products') || '[]');
             const filtered = viewed.filter(p => p.id !== adapted.id);
             filtered.unshift(adapted);
             localStorage.setItem('recently_viewed_products', JSON.stringify(filtered.slice(0, 10)));
-          } catch (e) {
-            console.error("Erreur lors de la sauvegarde des produits consultés :", e);
-          }
+          } catch (_) {}
         } else {
           throw new Error(c.product_not_found);
         }
       } catch (err) {
-        console.error("Failed to load product from API.", err);
+        console.error('Failed to load product from API.', err);
         setError(c.product_load_error);
         setProduct(null);
         setIsDemoMode(false);
@@ -279,12 +211,9 @@ export const ProductDetail = () => {
         setLoading(false);
       }
     };
-    if (id) {
-      fetchProduct();
-    }
+    if (id) fetchProduct();
   }, [id, activeLocale]);
 
-  // Initialiser les choix par défaut une fois le produit chargé
   useEffect(() => {
     if (product) {
       setActiveImage(product.images?.[0] || product.image || '');
@@ -298,213 +227,226 @@ export const ProductDetail = () => {
     addToCart(product, quantity, selectedSize, selectedColor, selectedVariant?.id);
   };
 
-  if (loading) {
-    return (
-      <div className="max-w-7xl mx-auto py-20">
-        <ProductLoader text={c.loading_product_detail} />
-      </div>
-    );
-  }
+  const discountPct = product?.old_price && product?.price
+    ? Math.round((1 - product.price / product.old_price) * 100)
+    : null;
 
-  if (error) {
-    return (
-      <div className="max-w-7xl mx-auto py-20 text-center text-neutral-500">
-        <p>{error}</p>
-        <Link to="/catalog" className="text-accent underline mt-4 block">{c.return_to_catalog}</Link>
-      </div>
-    );
-  }
-
-  if (!product) {
-    return (
-      <div className="max-w-7xl mx-auto py-20 text-center text-neutral-500">
-        <p>{c.product_not_found}</p>
-        <Link to="/catalog" className="text-accent underline mt-4 block">{c.return_to_catalog}</Link>
-      </div>
-    );
-  }
+  if (loading) return <div className="max-w-7xl mx-auto py-24"><ProductLoader text={c.loading_product_detail} /></div>;
+  if (error) return (
+    <div className="max-w-7xl mx-auto py-24 text-center">
+      <p className="text-neutral-500">{error}</p>
+      <Link to="/catalog" className="text-accent underline mt-4 inline-block">{c.return_to_catalog}</Link>
+    </div>
+  );
+  if (!product) return (
+    <div className="max-w-7xl mx-auto py-24 text-center">
+      <p className="text-neutral-500">{c.product_not_found}</p>
+      <Link to="/catalog" className="text-accent underline mt-4 inline-block">{c.return_to_catalog}</Link>
+    </div>
+  );
 
   return (
-    <div className="max-w-7xl mx-auto w-full px-4 md:px-8 py-6 md:py-10 animate-fade-in">
-      {/* Breadcrumbs */}
-      <div className="flex gap-2 text-xs text-neutral-400 font-medium mb-8 text-left">
-        <Link to="/" className="hover:text-accent">{t('home')}</Link>
-        <span>/</span>
-        <Link to="/catalog" className="hover:text-accent">{c.collection}</Link>
-        <span>/</span>
-        <span className="text-neutral-600 font-semibold">{product.name}</span>
-        {isDemoMode && <span className="text-orange-500 font-semibold ml-2">{activeLocale === 'en' || activeLocale === 'eng' ? '(Demo Mode)' : '(Mode Démo)'}</span>}
+    <div className="w-full animate-fade-in bg-neutral-50">
+
+      {/* ── Breadcrumb ── */}
+      <div className="max-w-7xl mx-auto px-4 md:px-8 pt-5 pb-2">
+        <nav className="flex items-center gap-2 text-[11px] text-neutral-400 font-medium">
+          <Link to="/" className="hover:text-primary transition-colors">{t('home')}</Link>
+          <span className="text-neutral-300">/</span>
+          <Link to="/catalog" className="hover:text-primary transition-colors">{c.collection}</Link>
+          <span className="text-neutral-300">/</span>
+          <span className="text-neutral-600 font-semibold">{product.name}</span>
+          {isDemoMode && <span className="text-accent font-semibold ml-1">(Mode Démo)</span>}
+        </nav>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-12 text-left">
-        {/* Galerie d'Images */}
-        <div className="flex-1 flex flex-col md:flex-row gap-4 animate-slide-left">
-          {/* Vignettes à gauche */}
-          <div className="flex md:flex-col gap-2 order-2 md:order-1">
-            {product.images?.map((img, index) => (
-              <button
-                key={index}
-                onClick={() => setActiveImage(img)}
-                className={`w-16 h-20 border rounded-xs overflow-hidden ${
-                  activeImage === img ? 'border-primary ring-1 ring-primary' : 'border-neutral-200'
-                }`}
-              >
-                <img src={img} alt="" className="w-full h-full object-cover" />
-              </button>
-            ))}
-          </div>
+      {/* ── Main layout ── */}
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 pb-20">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_460px] gap-8 xl:gap-14 items-start">
 
-          {/* Image principale */}
-          <div className="flex-1 aspect-[3/4] bg-neutral-100 rounded-sm overflow-hidden order-1 md:order-2">
-            <img src={activeImage} alt={product.name} className="w-full h-full object-cover" />
-          </div>
-        </div>
+          {/* ─── Gallery ─── */}
+          <div className="flex gap-3">
+            {/* Vignettes desktop */}
+            {product.images?.length > 1 && (
+              <div className="hidden md:flex flex-col gap-2 w-[68px] shrink-0">
+                {product.images.map((img, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setActiveImage(img)}
+                    className={`w-[68px] h-[85px] overflow-hidden border-2 transition-all cursor-pointer ${
+                      activeImage === img ? 'border-primary' : 'border-transparent hover:border-neutral-300'
+                    }`}
+                  >
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
 
-        {/* Détails Achat */}
-        <div className="w-full lg:w-[450px] flex flex-col animate-slide-right">
-          <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">
-            {product.brand}
-          </span>
-          <h1 className="text-2xl font-bold text-neutral-900 mt-2 mb-3">
-            {product.name}
-          </h1>
+            {/* Image principale */}
+            <div className="flex-1 relative bg-neutral-100 overflow-hidden">
+              <div className="aspect-[4/5]">
+                <img src={activeImage} alt={product.name} className="w-full h-full object-cover" />
+              </div>
+              {/* Badge promo */}
+              {discountPct && (
+                <span className="absolute top-3 left-3 bg-primary text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-1 leading-none">
+                  -{discountPct}%
+                </span>
+              )}
+            </div>
 
-          {/* Prix */}
-          <div className="flex items-baseline gap-3 pb-6 border-b border-neutral-100">
-            <span className="text-2xl font-bold text-neutral-900">{formatPrice(product.price)}</span>
-            {product.old_price && (
-              <span className="text-base text-neutral-400 line-through">
-                {formatPrice(product.old_price)}
-              </span>
+            {/* Vignettes mobile */}
+            {product.images?.length > 1 && (
+              <div className="flex md:hidden gap-2 mt-2">
+                {product.images.map((img, i) => (
+                  <button key={i} onClick={() => setActiveImage(img)}
+                    className={`w-14 h-16 overflow-hidden border-2 cursor-pointer ${activeImage === img ? 'border-primary' : 'border-transparent'}`}>
+                    <img src={img} alt="" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
             )}
           </div>
 
-          {/* Sélection de Couleur */}
-          {product.colors && product.colors.length > 0 && (
-            <div className="py-6 border-b border-neutral-100">
-              <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-wider mb-3">
-                {t('color')} : <span className="text-neutral-900 font-semibold">{translateColor(selectedColor, activeLocale)}</span>
-              </h4>
-              <div className="flex gap-3 items-center flex-wrap">
-                {/* Couleurs locales du produit actuel */}
-                {product.colors.map((color) => (
-                  <button
-                    key={color.name}
-                    onClick={() => setSelectedColor(color.name)}
-                    className={`w-8 h-8 rounded-full border border-neutral-200 flex items-center justify-center transition-all cursor-pointer ${
-                      selectedColor === color.name ? 'ring-2 ring-primary ring-offset-2' : ''
-                    }`}
-                    style={{ backgroundColor: color.code }}
-                    title={translateColor(color.name, activeLocale)}
-                  />
-                ))}
+          {/* ─── Panneau info ─── */}
+          <div className="lg:sticky lg:top-6 flex flex-col bg-white border border-neutral-200 px-6 py-7">
 
-                {/* Liaisons vers d'autres couleurs (produits différents) */}
-                {(product.colorLinks || []).map((link) => (
-                  <Link
-                    key={link.product_id}
-                    to={`/product/${link.product_id}`}
-                    className="w-8 h-8 rounded-full border border-neutral-200 flex items-center justify-center hover:scale-110 transition-all relative group cursor-pointer"
-                    style={{ backgroundColor: link.color_code }}
-                    title={c.view_in_color.replace('{color}', translateColor(link.color_name, activeLocale))}
-                  >
-                    {/* Indicateur point blanc pour signifier la redirection */}
-                    <span className="w-1.5 h-1.5 bg-white rounded-full opacity-50 group-hover:opacity-100 transition-opacity" />
-                  </Link>
-                ))}
-              </div>
+            {/* Marque + Nom + Accroche */}
+            <div className="pb-5 border-b border-neutral-200">
+              <p className="text-[9px] font-black uppercase tracking-[0.3em] text-accent mb-2">{product.brand}</p>
+              <h1 className="text-[26px] font-black text-neutral-900 leading-tight tracking-tight mb-3 font-serif">
+                {product.name}
+              </h1>
+              {product.short_description && (
+                <p className="text-[13px] text-neutral-500 leading-relaxed">{product.short_description}</p>
+              )}
             </div>
-          )}
 
-          {/* Sélection de Taille */}
-          {product.sizes && product.sizes.length > 0 && (
-            <div className="py-6 border-b border-neutral-100">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="text-xs font-bold text-neutral-400 uppercase tracking-wider">
-                  {t('size')} : <span className="text-neutral-900 font-semibold">{selectedSize}</span>
-                </h4>
-                <button className="text-xs text-neutral-500 underline font-semibold hover:text-accent">
-                  {t('size_guide')}
-                </button>
-              </div>
-              <div className="flex gap-2">
-                {product.sizes.map((size) => {
-                  const sizeStock = getSizeStock(size);
-                  const isSelected = selectedSize === size;
-                  const isOutOfStock = sizeStock === 0;
+            {/* Prix */}
+            <div className="py-5 border-b border-neutral-200 flex items-baseline gap-3 flex-wrap">
+              <span className="text-2xl font-black text-primary">{formatPrice(product.price)}</span>
+              {product.old_price && (
+                <>
+                  <span className="text-base text-neutral-400 line-through font-medium">{formatPrice(product.old_price)}</span>
+                  {discountPct && (
+                    <span className="text-[11px] font-black text-white bg-primary px-2 py-0.5 leading-snug">
+                      −{discountPct}%
+                    </span>
+                  )}
+                </>
+              )}
+            </div>
 
-                  return (
+            {/* Couleurs */}
+            {product.colors?.length > 0 && (
+              <div className="py-5 border-b border-neutral-200">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500 mb-3">
+                  {t('color')}
+                  <span className="text-neutral-300 mx-2">—</span>
+                  <span className="text-neutral-700 normal-case tracking-normal font-semibold">
+                    {translateColor(selectedColor, activeLocale)}
+                  </span>
+                </p>
+                <div className="flex gap-2.5 flex-wrap">
+                  {product.colors.map(color => (
                     <button
-                      key={size}
-                      onClick={() => setSelectedSize(size)}
-                      className={`relative min-w-12 h-11 border text-sm font-semibold flex items-center justify-center transition-all rounded-xs cursor-pointer ${
-                        isOutOfStock
-                          ? isSelected
-                            ? 'border-neutral-500 bg-neutral-100 text-neutral-850'
-                            : 'border-neutral-200 text-neutral-300 bg-neutral-50/50 hover:border-neutral-400 hover:text-neutral-500'
-                          : isSelected
-                          ? 'border-primary bg-primary text-white shadow-xs'
-                          : 'border-neutral-200 text-neutral-600 hover:border-neutral-400 hover:bg-neutral-50/20'
+                      key={color.name}
+                      onClick={() => setSelectedColor(color.name)}
+                      title={translateColor(color.name, activeLocale)}
+                      style={{ backgroundColor: color.code }}
+                      className={`w-8 h-8 border-2 transition-all duration-150 cursor-pointer ${
+                        selectedColor === color.name
+                          ? 'ring-2 ring-offset-2 ring-primary border-primary'
+                          : 'border-transparent hover:border-neutral-400'
                       }`}
+                    />
+                  ))}
+                  {(product.colorLinks || []).map(link => (
+                    <Link
+                      key={link.product_id}
+                      to={`/product/${link.product_id}`}
+                      title={c.view_in_color.replace('{color}', translateColor(link.color_name, activeLocale))}
+                      style={{ backgroundColor: link.color_code }}
+                      className="w-8 h-8 border-2 border-transparent hover:border-accent transition-all relative group cursor-pointer"
                     >
-                      {size}
-                      {isOutOfStock && (
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <div className="w-[140%] h-[1.5px] bg-neutral-300 rotate-45 transform origin-center" />
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-              {/* Stock restant (Trendyol-style alert box) */}
-          {maxStock > 0 && maxStock <= 5 && (
-            <div className="my-5 p-3.5 bg-neutral-100/70 border border-accent/30 flex items-center gap-3 animate-pulse rounded-sm text-left shadow-2xs">
-              <div className="bg-accent text-white rounded-full p-1.5 shrink-0">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-xs font-black text-neutral-900 uppercase tracking-wide">{c.stock_very_limited}</p>
-                <p className="text-[11px] font-semibold text-neutral-700 mt-0.5">
-                  {c.hurry_only_items_left.replace('{count}', String(maxStock)).replace(/\{plural\}/g, maxStock > 1 ? 's' : '')}
-                </p>
-              </div>
-            </div>
-          )}
-          
-          {maxStock === 0 && (
-            <div className="my-5 flex flex-col gap-4">
-              <div className="p-3.5 bg-primary/5 border border-primary/20 flex items-center gap-3 rounded-sm text-left shadow-2xs">
-                <div className="bg-primary text-white rounded-full p-1.5 shrink-0">
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </div>
-                <div>
-                  <p className="text-xs font-black text-primary-dark uppercase tracking-wide">{t('out_of_stock')}</p>
-                  <p className="text-[11px] font-semibold text-neutral-700 mt-0.5">
-                    {c.out_of_stock_desc}
-                  </p>
+                      <span className="absolute inset-0 flex items-center justify-center">
+                        <span className="w-1.5 h-1.5 bg-white rounded-full opacity-60 group-hover:opacity-100 transition-opacity" />
+                      </span>
+                    </Link>
+                  ))}
                 </div>
               </div>
+            )}
 
-              {/* Formulaire M'avertir (Trendyol Style) */}
-              <div className="p-4 bg-neutral-100/50 border border-neutral-250/70 rounded-sm text-left">
-                <p className="text-xs font-bold text-neutral-800 uppercase tracking-wider flex items-center gap-1.5 mb-2">
-                  <svg className="w-4 h-4 text-primary animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                  </svg>
-                  {c.notify_stock_return}
-                </p>
-                <p className="text-[11px] text-neutral-500 mb-3 leading-relaxed">
-                  {c.notify_stock_desc.replace('{size}', selectedSize).replace('{color}', translateColor(selectedColor, activeLocale))}
-                </p>
+            {/* Tailles */}
+            {product.sizes?.length > 0 && (
+              <div className="py-5 border-b border-neutral-200">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500">
+                    {t('size')}
+                    <span className="text-neutral-300 mx-2">—</span>
+                    <span className="text-neutral-700 normal-case tracking-normal font-semibold">{selectedSize}</span>
+                  </p>
+                  <button className="flex items-center gap-1 text-[10px] text-neutral-400 hover:text-primary transition-colors font-bold uppercase tracking-wider cursor-pointer">
+                    <Ruler className="w-3 h-3" />{t('size_guide')}
+                  </button>
+                </div>
+
+                <div className="flex gap-2 flex-wrap">
+                  {product.sizes.map(size => {
+                    const stock = getSizeStock(size);
+                    const sel = selectedSize === size;
+                    const oos = stock === 0;
+                    return (
+                      <button
+                        key={size}
+                        onClick={() => setSelectedSize(size)}
+                        className={`relative min-w-[46px] h-[46px] px-2 text-sm font-bold border transition-all cursor-pointer ${
+                          oos
+                            ? sel
+                              ? 'border-neutral-300 text-neutral-400 bg-neutral-50'
+                              : 'border-neutral-200 text-neutral-300 hover:border-neutral-300'
+                            : sel
+                            ? 'border-primary bg-primary text-white shadow-sm'
+                            : 'border-neutral-300 text-neutral-700 hover:border-primary hover:text-primary'
+                        }`}
+                      >
+                        {size}
+                        {oos && (
+                          <span className="absolute inset-0 overflow-hidden pointer-events-none flex items-center justify-center">
+                            <span className="block w-[135%] h-px bg-current opacity-30 rotate-45" />
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Alerte stock */}
+                {maxStock > 0 && maxStock <= 5 && (
+                  <p className="mt-3 flex items-center gap-2 text-[11px] font-semibold text-primary bg-primary/5 border border-primary/20 px-3 py-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />
+                    {c.hurry_only_items_left.replace('{count}', String(maxStock)).replace(/\{plural\}/g, maxStock > 1 ? 's' : '')}
+                  </p>
+                )}
+                {maxStock > 5 && (
+                  <p className="mt-3 flex items-center gap-2 text-[11px] font-semibold text-accent-dark">
+                    <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse shrink-0" />
+                    {c.in_stock_msg}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Rupture de stock — formulaire alerte */}
+            {maxStock === 0 && (
+              <div className="py-5 border-b border-neutral-200">
+                <p className="text-[11px] font-black uppercase tracking-wider text-primary mb-1">{c.out_of_stock_label}</p>
+                <p className="text-[12px] text-neutral-400 mb-3 leading-relaxed">{c.out_of_stock_desc}</p>
                 {isNotifySubmitted ? (
-                  <div className="text-[11px] font-semibold text-neutral-800 bg-neutral-100/70 border border-accent/30 p-3 rounded-xs flex items-center gap-2 animate-fade-in">
-                    <CheckCircle className="w-4.5 h-4.5 text-accent shrink-0" />
-                    {c.notify_stock_success}
+                  <div className="flex items-center gap-2 text-[12px] font-semibold text-accent-dark bg-accent/10 border border-accent/30 px-3 py-2.5">
+                    <CheckCircle className="w-4 h-4 shrink-0 text-accent" />{c.notify_stock_success}
                   </div>
                 ) : (
                   <form onSubmit={handleNotifySubmit} className="flex gap-2">
@@ -513,106 +455,81 @@ export const ProductDetail = () => {
                       type="text"
                       placeholder={c.email_or_phone_placeholder}
                       value={notifyContact}
-                      onChange={(e) => setNotifyContact(e.target.value)}
+                      onChange={e => setNotifyContact(e.target.value)}
                       required
-                      className="flex-1 bg-white border border-neutral-300 text-xs px-3 py-2 rounded-xs focus:outline-none focus:border-primary text-neutral-800"
+                      className="flex-1 border border-neutral-300 text-xs px-3 py-2.5 focus:outline-none focus:border-primary text-neutral-800 bg-white"
                     />
-                    <button
-                      type="submit"
-                      className="bg-primary hover:bg-primary-light text-white font-bold text-xs uppercase tracking-wider px-4 py-2 rounded-xs transition-colors cursor-pointer shrink-0"
-                    >
+                    <button type="submit" className="bg-primary hover:bg-primary-dark text-white text-[11px] font-black uppercase tracking-wider px-4 py-2.5 transition-colors cursor-pointer shrink-0">
                       {c.validate}
                     </button>
                   </form>
                 )}
               </div>
-            </div>
-          )}
-          
-          {maxStock > 5 && (
-            <div className="my-5 p-3 bg-neutral-100/50 border border-neutral-200/50 flex items-center gap-2.5 rounded-sm text-left shadow-2xs">
-              <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse shrink-0" />
-              <span className="text-[11px] font-semibold text-neutral-700">
-                {c.in_stock_count_delivery.replace('{count}', String(maxStock))}
-              </span>
-            </div>
-          )}
-        </div>
-      )}
-
-          {/* Sélecteur de Quantité et Ajout Panier */}
-          <div className="flex gap-4 py-8">
-            {maxStock > 0 && (
-              <div className="flex border border-neutral-300 rounded-sm">
-                <button
-                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  className="px-3 text-neutral-500 font-bold hover:bg-neutral-50 cursor-pointer"
-                >
-                  -
-                </button>
-                <input
-                  type="number"
-                  value={quantity}
-                  readOnly
-                  className="w-10 text-center font-semibold text-neutral-800 focus:outline-none"
-                />
-                <button
-                  onClick={() => setQuantity((q) => q + 1)}
-                  disabled={quantity >= maxStock}
-                  className="px-3 text-neutral-500 font-bold hover:bg-neutral-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-                >
-                  +
-                </button>
-              </div>
             )}
 
-            {maxStock > 0 ? (
-              <button
-                onClick={handleAddToCart}
-                className="flex-1 bg-primary hover:bg-neutral-800 text-white font-bold flex items-center justify-center gap-3 py-3 transition-colors duration-200 rounded-sm shadow-md cursor-pointer"
-              >
-                <ShoppingBag className="w-5 h-5" />
-                {t('add_to_cart')}
-              </button>
-            ) : (
-              <button
-                onClick={handleNotifyClick}
-                className="flex-1 bg-neutral-900 hover:bg-neutral-850 text-white font-bold flex items-center justify-center gap-3 py-3 transition-colors duration-200 rounded-sm shadow-md cursor-pointer animate-pulse"
-              >
-                <svg className="w-5 h-5 text-white shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                </svg>
-                {c.notify_stock_return}
-              </button>
-            )}
+            {/* CTA — Quantité + Panier + Favoris */}
+            <div className="pt-5 pb-2 flex gap-3">
+              {maxStock > 0 && (
+                <div className="flex border border-neutral-300 h-[52px] shrink-0">
+                  <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-11 text-neutral-500 text-lg hover:bg-neutral-50 hover:text-primary transition-colors cursor-pointer">−</button>
+                  <span className="w-10 flex items-center justify-center text-sm font-black text-neutral-900">{quantity}</span>
+                  <button onClick={() => setQuantity(q => q + 1)} disabled={quantity >= maxStock} className="w-11 text-neutral-500 text-lg hover:bg-neutral-50 hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer">+</button>
+                </div>
+              )}
 
-            <button
-              onClick={() => toggleFavorite(product)}
-              className="p-3 border border-neutral-300 hover:border-neutral-400 rounded-sm flex items-center justify-center transition-colors cursor-pointer"
-              title={isFavorite(product.id) ? c.remove_from_favorites : c.add_to_favorites}
-            >
-              <Heart
-                className={`w-5 h-5 transition-colors ${
-                  isFavorite(product.id) ? "fill-red-500 text-red-500" : "text-neutral-600 hover:text-red-500"
+              {maxStock > 0 ? (
+                <button
+                  onClick={handleAddToCart}
+                  className="flex-1 h-[52px] bg-primary hover:bg-primary-dark text-white font-black text-[11px] uppercase tracking-[0.18em] flex items-center justify-center gap-2.5 transition-colors cursor-pointer shadow-sm"
+                >
+                  <ShoppingBag className="w-4 h-4" />
+                  {t('add_to_cart')}
+                </button>
+              ) : (
+                <button
+                  onClick={handleNotifyClick}
+                  className="flex-1 h-[52px] border-2 border-primary text-primary hover:bg-primary hover:text-white font-black text-[11px] uppercase tracking-[0.18em] flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  {c.notify_stock_return}
+                </button>
+              )}
+
+              <button
+                onClick={() => toggleFavorite(product)}
+                title={isFavorite(product.id) ? c.remove_from_favorites : c.add_to_favorites}
+                className={`w-[52px] h-[52px] border flex items-center justify-center transition-all cursor-pointer ${
+                  isFavorite(product.id) ? 'border-primary/30 bg-primary/5' : 'border-neutral-300 hover:border-primary/40'
                 }`}
-              />
-            </button>
-          </div>
+              >
+                <Heart className={`w-5 h-5 transition-colors ${
+                  isFavorite(product.id) ? 'fill-primary text-primary' : 'text-neutral-400 hover:text-primary'
+                }`} />
+              </button>
+            </div>
 
-          {/* Réassurance de Livraison */}
-          <div className="flex flex-col gap-3.5 bg-neutral-50 p-4 rounded-sm border border-neutral-100 text-xs text-neutral-500 font-medium">
-            <div className="flex items-center gap-2.5">
-              <Truck className="w-4 h-4 text-neutral-700" />
-              <span>{c.free_delivery_terms}</span>
-            </div>
-            <div className="flex items-center gap-2.5">
-              <RotateCcw className="w-4 h-4 text-neutral-700" />
-              <span>{c.free_returns_terms}</span>
-            </div>
-            <div className="flex items-center gap-2.5">
-              <ShieldCheck className="w-4 h-4 text-neutral-700" />
-              <span>{c.secure_payment_terms}</span>
-            </div>
+            {/* Accordéons */}
+            {product.description && (
+              <Accordion label={c.description_label} defaultOpen>
+                <p className="whitespace-pre-line">{product.description}</p>
+              </Accordion>
+            )}
+            <Accordion label={c.delivery_label}>
+              <div className="flex flex-col gap-3.5">
+                <div className="flex items-start gap-3">
+                  <Truck className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+                  <span>{c.free_delivery_terms}</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <RotateCcw className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+                  <span>{c.free_returns_terms}</span>
+                </div>
+                <div className="flex items-start gap-3">
+                  <ShieldCheck className="w-4 h-4 text-accent shrink-0 mt-0.5" />
+                  <span>{c.secure_payment_terms}</span>
+                </div>
+              </div>
+            </Accordion>
+
           </div>
         </div>
       </div>
@@ -621,4 +538,3 @@ export const ProductDetail = () => {
 };
 
 export default ProductDetail;
-

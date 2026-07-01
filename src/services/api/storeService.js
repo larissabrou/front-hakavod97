@@ -29,6 +29,7 @@ export const storeService = {
     return response.data?.data ?? response.data;
   },
 
+
   // Récupérer la configuration dynamique du footer
   getFooter: async (params = {}) => {
     const response = await apiClient.get('/store/footer', { params });

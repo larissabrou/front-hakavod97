@@ -117,12 +117,14 @@ export const HeroSlides = ({
   showConfirm,
   showAlert,
   setSuccess,
-  setError
+  setError,
+  initialSection = 'top',
+  hideTabs = false
 }) => {
   const { formatPrice } = useSettings();
   
   // Onglet de gestion : 'top' (En-tête), 'middle' (Milieu/ Chelsea) ou 'menu_banners' (Méga Menu)
-  const [activeSection, setActiveSection] = useState('top');
+  const [activeSection, setActiveSection] = useState(initialSection);
   
   // Données
   const [middleSlides, setMiddleSlides] = useState([]);
@@ -148,6 +150,7 @@ export const HeroSlides = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSlide, setEditingSlide] = useState(null);
   const [imageLoading, setImageLoading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
   const [previewSlide, setPreviewSlide] = useState(null);
 
   const [formData, setFormData] = useState({
@@ -445,71 +448,64 @@ export const HeroSlides = ({
     setFooterConfig({ ...footerConfig, columns: updatedCols });
   };
 
-  // Sauvegarder dans localStorage et sur le serveur API
-  const saveSlidesData = async (updated, section) => {
-    let currentTop = topSlides;
-    let currentMiddle = middleSlides;
-
+  // Sauvegarder dans localStorage (uniquement pour le cache)
+  const saveToLocal = (updated, section) => {
     if (section === 'middle') {
       setMiddleSlides(updated);
       localStorage.setItem('home_hero_slides', JSON.stringify(updated));
-      currentMiddle = updated;
     } else {
       setTopSlides(updated);
       localStorage.setItem('main_hero_slides', JSON.stringify(updated));
-      currentTop = updated;
-    }
-
-    // Convertir au format attendu par le backend API
-    const apiTopSlides = currentTop.map(s => ({
-      id: s.id && !s.id.startsWith('top-') && !s.id.startsWith('default-') ? Number(s.id) : null,
-      layout: 'full',
-      label: s.tag || '',
-      title: s.title_line1 || '',
-      subtitle: s.title_line2_italic || '',
-      description: s.description || '',
-      image_url: s.image || '',
-      cta_url: s.link_primary || '',
-      cta_text: s.link_primary_label || '',
-      secondary_cta_url: s.link_secondary || '',
-      secondary_cta_text: s.link_secondary_label || '',
-      active: s.active !== false
-    }));
-
-    const apiMiddleSlides = currentMiddle.map(s => ({
-      id: s.id && !s.id.startsWith('middle-') && !s.id.startsWith('default-') ? Number(s.id) : null,
-      layout: 'split',
-      label: s.tag || '',
-      title: s.title || '',
-      subtitle: s.subtitle || '',
-      description: s.description || '',
-      price: s.price ? Number(s.price) : null,
-      compare_at_price: s.old_price ? Number(s.old_price) : null,
-      image_url: s.image || '',
-      cta_url: s.link || '',
-      active: s.active !== false
-    }));
-
-    const combinedSlides = [...apiTopSlides, ...apiMiddleSlides];
-
-    try {
-      await adminService.updateHomeSlides(combinedSlides);
-    } catch (err) {
-      console.error("Erreur de sauvegarde des slides sur le serveur", err);
     }
   };
 
-  // Gérer le changement de fichier (Image / Vidéo)
+  const mapToApiSlide = (s, section) => {
+    if (section === 'middle') {
+      return {
+        layout: 'split',
+        label: s.tag || '',
+        title: s.title || '',
+        subtitle: s.subtitle || '',
+        description: s.description || '',
+        price: s.price ? Number(s.price) : null,
+        compare_at_price: s.old_price ? Number(s.old_price) : null,
+        image: s.image || '',
+        image_url: s.image || '',
+        cta_url: s.link || '',
+        active: s.active !== false ? 1 : 0
+      };
+    } else {
+      return {
+        layout: 'full',
+        type: s.type || 'image',
+        label: s.tag || '',
+        title: s.title_line1 || '',
+        subtitle: s.title_line2_italic || '',
+        description: s.description || '',
+        image: s.image || '',
+        image_url: s.image || '',
+        cta_url: s.link_primary || '',
+        cta_text: s.link_primary_label || '',
+        secondary_cta_url: s.link_secondary || '',
+        secondary_cta_text: s.link_secondary_label || '',
+        active: s.active !== false ? 1 : 0
+      };
+    }
+  };
+
+  // Gérer l'upload de médias
   const handleMediaUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    setSelectedFile(file); // Save for API upload
+    setImageLoading(true);
     const isVideo = file.type.startsWith('video/');
+    
     // Limiter la taille à 4.5 Mo pour éviter de saturer le localStorage (limite max locale ~ 5 Mo)
     const maxSize = 4.5 * 1024 * 1024;
     if (file.size > maxSize) {
       showAlert(`Le fichier est trop volumineux pour le stockage local. Taille maximale : 4.5 Mo. Pour les fichiers plus lourds, veuillez copier/coller une URL directe.`);
-      return;
     }
 
     setImageLoading(true);
@@ -528,6 +524,7 @@ export const HeroSlides = ({
   // Gérer la création
   const handleCreate = () => {
     setEditingSlide(null);
+    setSelectedFile(null);
     if (activeSection === 'middle') {
       setFormData({
         active: true,
@@ -562,6 +559,7 @@ export const HeroSlides = ({
   // Gérer l'édition
   const handleEdit = (slide) => {
     setEditingSlide(slide);
+    setSelectedFile(null);
     if (activeSection === 'middle') {
       setFormData({
         active: slide.active !== undefined ? slide.active : true,
@@ -601,26 +599,45 @@ export const HeroSlides = ({
       warningText: 'Cette action est irréversible et retirera immédiatement le visuel de la boutique en ligne.'
     });
     if (!confirmed) return;
-    const currentList = activeSection === 'middle' ? middleSlides : topSlides;
-    const filtered = currentList.filter(s => s.id !== id);
-    saveSlidesData(filtered, activeSection);
-    if (previewSlide && previewSlide.id === id) {
-      setPreviewSlide(null);
-    }
-    if (setSuccess) {
-      setSuccess('Diapositive supprimée avec succès.');
+
+    try {
+      if (typeof id === 'number' || (typeof id === 'string' && !id.startsWith('default-') && !id.startsWith('top-') && !id.startsWith('middle-'))) {
+        await adminService.deleteHomeSlide(id);
+      }
+      const currentList = activeSection === 'middle' ? middleSlides : topSlides;
+      const filtered = currentList.filter(s => s.id !== id);
+      saveToLocal(filtered, activeSection);
+      if (previewSlide && previewSlide.id === id) {
+        setPreviewSlide(null);
+      }
+      if (setSuccess) {
+        setSuccess('Diapositive supprimée avec succès.');
+      }
+    } catch (err) {
+      showAlert("Erreur lors de la suppression : " + (err?.response?.data?.message || err.message));
     }
   };
 
   // Activer / Désactiver
-  const toggleActive = (id) => {
+  const toggleActive = async (id) => {
     const currentList = activeSection === 'middle' ? middleSlides : topSlides;
-    const updated = currentList.map(s => s.id === id ? { ...s, active: !s.active } : s);
-    saveSlidesData(updated, activeSection);
+    const slide = currentList.find(s => s.id === id);
+    if (!slide) return;
+    
+    try {
+      const isRealId = typeof id === 'number' || (typeof id === 'string' && !id.startsWith('default-') && !id.startsWith('top-') && !id.startsWith('middle-'));
+      if (isRealId) {
+        await adminService.updateHomeSlide(id, { active: !slide.active });
+      }
+      const updated = currentList.map(s => s.id === id ? { ...s, active: !s.active } : s);
+      saveToLocal(updated, activeSection);
+    } catch (err) {
+      showAlert("Erreur lors de l'activation : " + (err?.response?.data?.message || err.message));
+    }
   };
 
   // Enregistrer le formulaire
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.image) {
       showAlert("Le média (image ou vidéo) est obligatoire.");
@@ -640,7 +657,7 @@ export const HeroSlides = ({
         old_price: formData.old_price ? Number(formData.old_price) : null,
         image: formData.image,
         link: formData.link || '/catalog',
-        active: formData.active
+        active: formData.active !== false
       };
     } else {
       slideData = {
@@ -654,23 +671,62 @@ export const HeroSlides = ({
         link_primary_label: formData.link_primary_label || 'Découvrir',
         link_secondary: formData.link_secondary || '/catalog?category=nouveautes',
         link_secondary_label: formData.link_secondary_label || 'Nouveautés',
-        active: formData.active
+        active: formData.active !== false
       };
     }
 
-    let updated;
-    if (editingSlide) {
-      updated = currentList.map(s => s.id === editingSlide.id ? { ...s, ...slideData } : s);
-    } else {
-      const newSlide = {
-        id: `${activeSection}-${Date.now()}`,
-        ...slideData
-      };
-      updated = [...currentList, newSlide];
-    }
+    try {
+      let updated;
+      const apiPayload = mapToApiSlide(slideData, activeSection);
+      let savedSlideId = null;
 
-    saveSlidesData(updated, activeSection);
-    setIsModalOpen(false);
+      if (editingSlide) {
+        const isRealId = typeof editingSlide.id === 'number' || (typeof editingSlide.id === 'string' && !editingSlide.id.startsWith('default-') && !editingSlide.id.startsWith('top-') && !editingSlide.id.startsWith('middle-'));
+        if (isRealId) {
+          const res = await adminService.updateHomeSlide(editingSlide.id, apiPayload);
+          savedSlideId = res.data?.id || res.id || editingSlide.id;
+        }
+        updated = currentList.map(s => s.id === editingSlide.id ? { ...s, ...slideData } : s);
+        if (setSuccess) setSuccess("Diapositive mise à jour !");
+      } else {
+        const res = await adminService.addHomeSlide(apiPayload);
+        savedSlideId = res.data?.id || res.id;
+        const newSlide = {
+          ...slideData,
+          id: savedSlideId || `${activeSection}-${Date.now()}`
+        };
+        updated = [...currentList, newSlide];
+        if (setSuccess) setSuccess("Nouvelle diapositive ajoutée !");
+      }
+
+      // S'il y a un fichier sélectionné, on l'uploade via le point d'accès dédié
+      if (selectedFile && savedSlideId) {
+        try {
+          const fd = new FormData();
+          fd.append('image', selectedFile);
+          const uploadRes = await adminService.uploadHomeSlideImage(savedSlideId, fd);
+          // Si l'upload retourne l'image mise à jour, on met à jour notre state
+          const newImageUrl = uploadRes.data?.image || uploadRes.data?.image_url || uploadRes.image || uploadRes.image_url;
+          if (newImageUrl) {
+            updated = updated.map(s => s.id === (editingSlide ? editingSlide.id : savedSlideId) ? { ...s, image: newImageUrl } : s);
+          }
+        } catch (uploadErr) {
+          console.error("Erreur lors de l'upload de l'image:", uploadErr);
+          showAlert("La diapositive a été sauvegardée, mais l'image n'a pas pu être envoyée. " + (uploadErr?.response?.data?.message || ''));
+        }
+      }
+
+      saveToLocal(updated, activeSection);
+      setIsModalOpen(false);
+      setSelectedFile(null);
+    } catch (err) {
+      console.error("Erreur API:", err);
+      let errorMsg = err?.response?.data?.message || err.message;
+      if (err?.response?.data?.errors) {
+        errorMsg += "\\n" + JSON.stringify(err.response.data.errors, null, 2);
+      }
+      showAlert("Erreur lors de la sauvegarde : " + errorMsg);
+    }
   };
 
   const currentSlidesList = activeSection === 'middle' ? middleSlides : topSlides;
@@ -678,49 +734,50 @@ export const HeroSlides = ({
   return (
     <div className="space-y-8 animate-fade-in text-xs">
       
-      {/* ── SOUS-ONGLETS DE SÉLECTION ── */}
-      <div className={`flex border-b ${isDarkMode ? 'border-neutral-800' : 'border-neutral-200'}`}>
-        <button
-          onClick={() => { setActiveSection('top'); setPreviewSlide(null); }}
-          className={`py-3 px-6 font-bold uppercase tracking-wider text-[10.5px] border-b-2 transition-all ${
-            activeSection === 'top'
-              ? 'border-accent text-accent'
-              : 'border-transparent text-neutral-400 hover:text-neutral-900'
-          }`}
-        >
-          Carrousel Principal (Haut)
-        </button>
-        <button
-          onClick={() => { setActiveSection('middle'); setPreviewSlide(null); }}
-          className={`py-3 px-6 font-bold uppercase tracking-wider text-[10.5px] border-b-2 transition-all ${
-            activeSection === 'middle'
-              ? 'border-accent text-accent'
-              : 'border-transparent text-neutral-400 hover:text-neutral-900'
-          }`}
-        >
-          Carrousel Produits (Milieu)
-        </button>
-        <button
-          onClick={() => { setActiveSection('menu_banners'); setPreviewSlide(null); }}
-          className={`py-3 px-6 font-bold uppercase tracking-wider text-[10.5px] border-b-2 transition-all ${
-            activeSection === 'menu_banners'
-              ? 'border-accent text-accent'
-              : 'border-transparent text-neutral-400 hover:text-neutral-950'
-          }`}
-        >
-          Méga Menu (Bannières)
-        </button>
-        <button
-          onClick={() => { setActiveSection('footer_config'); setPreviewSlide(null); }}
-          className={`py-3 px-6 font-bold uppercase tracking-wider text-[10.5px] border-b-2 transition-all ${
-            activeSection === 'footer_config'
-              ? 'border-accent text-accent'
-              : 'border-transparent text-neutral-400 hover:text-neutral-950'
-          }`}
-        >
-          Footer
-        </button>
-      </div>
+      {!hideTabs && (
+        <div className={`flex border-b mb-6 ${isDarkMode ? 'border-neutral-800' : 'border-neutral-200'}`}>
+          <button
+            onClick={() => { setActiveSection('top'); setPreviewSlide(null); }}
+            className={`py-3 px-6 font-bold uppercase tracking-wider text-[10.5px] border-b-2 transition-all ${
+              activeSection === 'top'
+                ? 'border-accent text-accent'
+                : 'border-transparent text-neutral-400 hover:text-neutral-950'
+            }`}
+          >
+            Carrousel Principal (Haut)
+          </button>
+          <button
+            onClick={() => { setActiveSection('middle'); setPreviewSlide(null); }}
+            className={`py-3 px-6 font-bold uppercase tracking-wider text-[10.5px] border-b-2 transition-all ${
+              activeSection === 'middle'
+                ? 'border-accent text-accent'
+                : 'border-transparent text-neutral-400 hover:text-neutral-950'
+            }`}
+          >
+            Carrousel Produits (Milieu)
+          </button>
+          <button
+            onClick={() => { setActiveSection('menu_banners'); setPreviewSlide(null); }}
+            className={`py-3 px-6 font-bold uppercase tracking-wider text-[10.5px] border-b-2 transition-all ${
+              activeSection === 'menu_banners'
+                ? 'border-accent text-accent'
+                : 'border-transparent text-neutral-400 hover:text-neutral-950'
+            }`}
+          >
+            Méga Menu (Bannières)
+          </button>
+          <button
+            onClick={() => { setActiveSection('footer_config'); setPreviewSlide(null); }}
+            className={`py-3 px-6 font-bold uppercase tracking-wider text-[10.5px] border-b-2 transition-all ${
+              activeSection === 'footer_config'
+                ? 'border-accent text-accent'
+                : 'border-transparent text-neutral-400 hover:text-neutral-950'
+            }`}
+          >
+            Footer
+          </button>
+        </div>
+      )}
 
       {activeSection !== 'menu_banners' && (
         <>

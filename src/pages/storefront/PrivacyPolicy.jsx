@@ -204,7 +204,7 @@ const PrivacyPolicy = () => {
           text-align: left;
         }
         .privacy-page .wrap {
-          max-width: 820px;
+          max-width: 95%;
           margin: 0 auto;
           padding: 40px 24px 80px;
         }

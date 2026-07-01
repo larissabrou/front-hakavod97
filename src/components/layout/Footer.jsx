@@ -98,7 +98,15 @@ export const Footer = () => {
       try {
         const data = await storeService.getFooter({ lang: activeLocale });
         if (data && (data.columns || data.description || data.phone)) {
-          const merged = { ...DEFAULT_FOOTER, ...data, socials: { ...DEFAULT_FOOTER.socials, ...(data.socials || {}) } };
+          const merged = {
+            ...DEFAULT_FOOTER,
+            ...data,
+            socials: {
+              ...DEFAULT_FOOTER.socials,
+              ...(data.socials || {}),
+              ...(data.social || {})
+            }
+          };
           setConfig(merged);
           localStorage.setItem('storefront_footer_config', JSON.stringify(merged));
           setLoaded(true);

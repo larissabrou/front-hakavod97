@@ -227,69 +227,94 @@ const PromoSection = ({ section, index, formatPrice, heroProductLink, nextSectio
   const [imgRef, imgV] = useReveal(0.1);
 
   const isImageLeft = section.layout === 'image-left';
-  const bgClass = isImageLeft ? 'bg-neutral-50' : 'bg-neutral-950';
-  const textColor = isImageLeft ? 'text-neutral-900' : 'text-white';
-  const descColor = isImageLeft ? 'text-neutral-500' : 'text-neutral-400';
-  const imgBgClass = isImageLeft ? 'bg-neutral-100' : 'bg-neutral-800';
-  const borderClass = isImageLeft ? 'border-neutral-200 text-neutral-600 hover:border-neutral-900 hover:bg-neutral-900 hover:text-white' : 'border-neutral-700 text-neutral-400 hover:border-white hover:text-white';
-  const btnClass = isImageLeft ? 'bg-neutral-900 hover:bg-accent text-white' : 'border border-white text-white hover:bg-white hover:text-neutral-900';
+  const isDarkTheme = index % 2 === 0;
+
+  const bgClass = isDarkTheme ? 'bg-[#17070a]' : 'bg-[#f5efe6]'; 
+  const textColor = isDarkTheme ? 'text-white' : 'text-[#17070a]';
+  const descColor = isDarkTheme ? 'text-neutral-400' : 'text-[#5e5243]';
+  const imgBgClass = isDarkTheme ? 'bg-[#2a131a]' : 'bg-[#eae3d8]'; 
+  
+  // Format old price & calculate discount percent if compare_at_price is set
+  const priceVal = section.price ?? 0;
+  const oldPriceVal = section.old_price;
+  let discountPercent = section.discount;
+  if (!discountPercent && oldPriceVal && oldPriceVal > priceVal) {
+    const pct = Math.round(((oldPriceVal - priceVal) / oldPriceVal) * 100);
+    discountPercent = `-${pct}%`;
+  }
 
   return (
-    <section ref={index === 0 ? nextSectionRef : null} className="w-full grid grid-cols-1 lg:grid-cols-2 min-h-[80vh]">
-      {/* Image */}
+    <section ref={index === 0 ? nextSectionRef : null} className="w-full grid grid-cols-1 lg:grid-cols-2 min-h-[85vh]">
+      {/* Image Column */}
       <div
         ref={imgRef}
-        className={`img-zoom relative ${imgBgClass} min-h-[500px] lg:min-h-auto ${isImageLeft ? 'order-1 reveal-left' : 'order-1 lg:order-2 reveal-right'} ${imgV ? 'revealed' : ''}`}
+        className={`relative ${imgBgClass} min-h-[500px] lg:min-h-auto p-8 lg:p-14 flex items-center justify-center ${isImageLeft ? 'order-1 reveal-left' : 'order-1 lg:order-2 reveal-right'} ${imgV ? 'revealed' : ''}`}
       >
-        <img src={section.image} alt={section.title_line1} className="absolute inset-0 w-full h-full object-cover object-center" />
-        <div className={`absolute inset-0 ${isImageLeft ? 'bg-black/5' : 'bg-black/10'}`} />
-        {section.badge && (
-          <span className="absolute top-8 left-8 text-[10px] tracking-[0.4em] uppercase font-bold bg-accent text-white px-3 py-1.5 animate-pulse-soft">
-            {section.badge}
-          </span>
-        )}
+        <div className="relative w-full h-full min-h-[400px] bg-white shadow-sm overflow-hidden group">
+          <img src={section.image} alt={section.title_line1} className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-105" />
+          <div className="absolute inset-0 bg-black/5" />
+          
+          {section.badge && (
+            <span className="absolute top-6 left-6 text-[9px] tracking-[0.3em] uppercase font-bold bg-[#c5a059] text-white px-3 py-1.5 shadow-sm z-10">
+              {section.badge}
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* Texte */}
+      {/* Text Column */}
       <div
         ref={txtRef}
-        className={`flex flex-col justify-center px-10 md:px-16 py-16 ${bgClass} ${isImageLeft ? 'order-2 reveal-right' : 'order-2 lg:order-1 reveal-left'} ${txtV ? 'revealed' : ''}`}
+        className={`flex flex-col justify-center px-8 md:px-16 lg:px-24 py-16 md:py-24 ${bgClass} ${isImageLeft ? 'order-2 reveal-right' : 'order-2 lg:order-1 reveal-left'} ${txtV ? 'revealed' : ''}`}
       >
-        <p className="text-[10px] font-bold tracking-[0.4em] uppercase text-accent mb-3">{section.tag}</p>
-        <h2 className={`text-4xl md:text-5xl font-black ${textColor} uppercase leading-tight tracking-tight`}>
-          {section.title_line1}<br />
-          {section.title_line2_italic ? (
-            <span className="italic font-light">{section.title_line2}</span>
-          ) : (
-            section.title_line2
+        <p className="text-[10px] font-bold tracking-[0.3em] uppercase text-[#c5a059] mb-3">{section.tag || 'Collection Signature'}</p>
+        
+        <h2 className={`text-3xl md:text-5xl font-black ${textColor} uppercase leading-[1.15] tracking-tight whitespace-pre-line`}>
+          {section.title_line1}
+          {section.title_line2 && (
+            <>
+              <br />
+              {section.title_line2}
+            </>
           )}
         </h2>
-        <div className={`w-12 h-0.5 bg-accent my-6 reveal-bar ${txtV ? 'revealed' : ''}`} />
-        <p className={`${descColor} leading-relaxed text-sm max-w-md`}>
-          {section.description}
-        </p>
-        <div className="flex items-baseline gap-3 mt-8">
-          <span className={`text-3xl font-black ${textColor}`}>{formatPrice(section.price)}</span>
-          {section.old_price && (
-            <span className="text-lg text-neutral-400 line-through">{formatPrice(section.old_price)}</span>
+        
+        {section.description && (
+          <>
+            <div className="w-16 h-[1.5px] bg-[#c5a059] my-6" />
+            <p className={`${descColor} leading-relaxed text-xs md:text-sm max-w-md`}>
+              {section.description}
+            </p>
+          </>
+        )}
+        
+        <div className="flex items-center gap-3.5 mt-8 flex-wrap">
+          <span className={`text-2xl md:text-3xl font-black ${textColor}`}>{formatPrice(priceVal)}</span>
+          {oldPriceVal && (
+            <span className="text-sm md:text-lg text-[#9c9284] line-through">{formatPrice(oldPriceVal)}</span>
           )}
-          {section.discount && (
-            <span className="text-xs font-bold text-accent-dark bg-accent-light/10 px-2 py-0.5">{section.discount}</span>
-          )}
-        </div>
-        <div className="flex gap-2 mt-6">
-          {(section.sizes || []).map((s) => (
-            <span key={s} className={`w-11 h-11 border ${borderClass} flex items-center justify-center text-xs font-semibold cursor-pointer transition-all duration-200`}>
-              {s}
+          {discountPercent && (
+            <span className="text-[9px] font-bold text-[#c5a059] bg-[#c5a059]/10 px-2 py-1 border border-[#c5a059]/20 uppercase tracking-widest">
+              {discountPercent}
             </span>
-          ))}
+          )}
         </div>
+
+        {section.sizes && section.sizes.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-6">
+            {section.sizes.map((s) => (
+              <span key={s} className={`w-11 h-11 border ${isDarkTheme ? 'border-neutral-700 bg-transparent text-white hover:border-white' : 'border-[#e7e0d2] bg-white text-[#17070a] hover:border-[#17070a]'} flex items-center justify-center text-xs font-semibold cursor-pointer transition-all duration-200`}>
+                {s}
+              </span>
+            ))}
+          </div>
+        )}
+
         <Link
           to={section.link || heroProductLink(index)}
-          className={`group mt-8 inline-flex items-center gap-3 ${btnClass} font-bold px-10 py-4 text-sm uppercase tracking-widest transition-all duration-300 self-start`}
+          className={`group mt-8 inline-flex items-center gap-3 ${isDarkTheme ? 'bg-white text-[#17070a] hover:bg-[#c5a059] hover:text-white' : 'bg-[#17070a] hover:bg-[#c5a059] text-white'} font-bold px-10 py-4 text-xs uppercase tracking-widest transition-all duration-300 self-start`}
         >
-          {viewProductLabel}
-          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          {viewProductLabel} <span className="ml-1 group-hover:translate-x-1 transition-transform">→</span>
         </Link>
       </div>
     </section>
@@ -332,7 +357,6 @@ export const Home = () => {
   const [featuredLoading, setFeaturedLoading] = useState(true);
   const [featuredError, setFeaturedError] = useState('');
   const nextSectionRef = useRef(null);
-
   const heroProductLink = (index) =>
     featuredProducts[index]?.id ? `/product/${featuredProducts[index].id}` : '/catalog';
 
@@ -577,24 +601,31 @@ export const Home = () => {
       try {
         const params = { lang: activeLocale };
         const slidesData = await storeService.getHomeSlides(params);
+        console.log("DEBUG: storeService.getHomeSlides returned:", slidesData);
         if (Array.isArray(slidesData) && slidesData.length > 0) {
-          const fullSlides = slidesData.filter(s => s.layout === 'full');
-          const splitSlides = slidesData.filter(s => s.layout === 'split');
+          // Fallback au cas où l'API ne renvoie pas le champ 'layout'
+          const processedSlides = slidesData.map(s => ({
+            ...s,
+            layout: s.layout || (s.price !== undefined && s.price !== null ? 'split' : 'full')
+          }));
+          
+          const fullSlides = processedSlides.filter(s => s.layout === 'full');
+          const splitSlides = processedSlides.filter(s => s.layout === 'split');
 
           if (fullSlides.length > 0) {
             setTopSlides(fullSlides.map((s, idx) => ({
               id: s.id || `top-api-${idx}`,
               type: s.secondary_image_url ? 'video' : 'image',
-              tag: s.label || '',
-              title_line1: s.title || '',
-              title_line2_italic: s.subtitle || '',
+              tag: s.tag || s.label || '',
+              title_line1: s.title_line1 || s.title || '',
+              title_line2_italic: s.title_line2_italic || s.subtitle || '',
               description: s.description || '',
-              image: s.image_url || HERO_IMG,
-              link_primary: s.cta_url || '/catalog',
-              link_primary_label: s.cta_text || (activeLocale === 'en' ? 'Discover' : 'Découvrir'),
-              link_secondary: s.secondary_cta_url || '',
-              link_secondary_label: s.secondary_cta_text || '',
-              active: true
+              image: s.image_url || s.image || HERO_IMG,
+              link_primary: s.link_primary || s.cta_url || '/catalog',
+              link_primary_label: s.link_primary_label || s.cta_text || (activeLocale === 'en' ? 'Discover' : 'Découvrir'),
+              link_secondary: s.link_secondary || s.secondary_cta_url || '',
+              link_secondary_label: s.link_secondary_label || s.secondary_cta_text || '',
+              active: s.active !== false
             })));
           }
 
@@ -614,6 +645,7 @@ export const Home = () => {
           }
         }
       } catch (err) {
+        window.HERO_DEBUG_ERROR = err.message;
         console.warn("Impossible de charger les slides de l'API, utilisation des valeurs par défaut :", err);
       }
 
@@ -622,7 +654,35 @@ export const Home = () => {
         const params = { lang: activeLocale };
         const featuredPromoData = await storeService.getHomeFeaturedProducts(params);
         if (Array.isArray(featuredPromoData) && featuredPromoData.length > 0) {
-          setPromoSections(featuredPromoData.map((item, idx) => ({
+          // Pour chaque section sans description, aller chercher celle du produit associé
+          const enriched = await Promise.all(featuredPromoData.map(async (item) => {
+            let description = item.description || item.short_description || item.product?.description || item.product?.short_description || '';
+            const identifier = item.product_slug || item.product_id;
+            
+            if (!description && identifier) {
+              try {
+                const prodData = await productService.getProductById(identifier);
+                const p = prodData?.data ?? prodData;
+                description = p?.description || p?.short_description || '';
+              } catch (_) { /* silencieux */ }
+            }
+            
+            // Si toujours pas de description, fallback extrême (pour débuguer visuellement)
+            if (!description) {
+               description = "Découvrez ce produit exceptionnel. " + (item.title || '');
+            }
+            
+            // Strip HTML from description if present
+            if (typeof description === 'string') {
+              description = description.replace(/<[^>]+>/g, '').trim();
+              if (description.length > 250) {
+                description = description.substring(0, 247) + '...';
+              }
+            }
+            
+            return { ...item, description };
+          }));
+          setPromoSections(enriched.map((item, idx) => ({
             id: item.id || `promo-api-${idx}`,
             tag: item.label || '',
             title_line1: item.title || '',
@@ -648,7 +708,7 @@ export const Home = () => {
       try {
         const params = { lang: activeLocale };
         const blocksData = await storeService.getHomeBlocks(params);
-        if (Array.isArray(blocksData) && blocksData.length > 0) {
+        if (Array.isArray(blocksData)) {
           setHomeBlocks(blocksData);
         }
       } catch (err) {
@@ -729,25 +789,6 @@ export const Home = () => {
           );
         })}
 
-        {/* Flèches de navigation pour le haut */}
-        {displayTopSlides.length > 1 && (
-          <>
-            <button
-              onClick={prevTopSlide}
-              className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 z-20 w-11 h-11 bg-black/40 hover:bg-accent hover:text-neutral-900 text-white hidden md:flex items-center justify-center transition-all cursor-pointer border-0"
-              title={tContent.prev}
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <button
-              onClick={nextTopSlide}
-              className="absolute right-4 md:right-6 top-1/2 -translate-y-1/2 z-20 w-11 h-11 bg-black/40 hover:bg-accent hover:text-neutral-900 text-white hidden md:flex items-center justify-center transition-all cursor-pointer border-0"
-              title={tContent.next}
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </>
-        )}
 
         {/* Indicateurs (dots en barres horizontales) */}
         {displayTopSlides.length > 1 && (
@@ -936,8 +977,8 @@ export const Home = () => {
       {/* ═══════════════════════════════════════
           SECTION 5 – ARTISANAT (BLOCS ÉDITORIAUX DYNAMIQUES OU FALLBACK)
       ═══════════════════════════════════════ */}
-      {homeBlocks.length > 0 ? (
-        homeBlocks.map((block, idx) => {
+      {homeBlocks.filter(b => b.slug !== 'cta').length > 0 ? (
+        homeBlocks.filter(b => b.slug !== 'cta').map((block, idx) => {
           const isImageLeft = block.layout === 'split' && idx % 2 === 0;
           return (
             <section key={block.id || idx} className="w-full grid grid-cols-1 lg:grid-cols-2 min-h-[70vh]">
@@ -1035,26 +1076,72 @@ export const Home = () => {
       {/* ═══════════════════════════════════════
           SECTION 7 – CTA LIFESTYLE
       ═══════════════════════════════════════ */}
-      <section
-        ref={s7}
-        className={`relative w-full h-[60vh] min-h-[400px] flex items-center justify-center overflow-hidden reveal-scale ${s7V ? 'revealed' : ''}`}
-      >
-        <img src={LIFESTYLE_IMG} alt="Ha-Kavod 97 lifestyle" className="absolute inset-0 w-full h-full object-cover object-top animate-ken-burns" />
-        <div className="absolute inset-0 bg-black/60" />
-        <div className={`relative z-10 text-center px-4 reveal-hidden ${s7V ? 'revealed' : ''}`}>
-          <p className="text-[11px] font-bold tracking-[0.5em] uppercase text-accent mb-4 animate-pulse-soft">
-            {tContent.cta_subtitle}
-          </p>
-          <h2 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tight" dangerouslySetInnerHTML={{ __html: tContent.cta_title }} />
-          <Link
-            to="/catalog"
-            className="group mt-10 inline-flex items-center gap-3 bg-accent hover:bg-white text-neutral-900 font-black px-12 py-5 text-sm uppercase tracking-widest transition-all duration-300"
+      {(() => {
+        const ctaBlock = homeBlocks.find(b => b.slug === 'cta');
+        const showDynamic = ctaBlock && ctaBlock.is_active !== false;
+        const btnLink = showDynamic ? (ctaBlock.bullets?.[0] || '/catalog') : '/catalog';
+        const imgVAlignRaw = showDynamic ? (ctaBlock.bullets?.[1] || '50') : '50';
+        const overlayOpacity = showDynamic ? (ctaBlock.bullets?.[2] || '60') : '60';
+        const useParallax = showDynamic ? (ctaBlock.bullets?.[3] === 'true') : false;
+        const imgHAlignRaw = showDynamic ? (ctaBlock.bullets?.[4] || '50') : '50';
+        const bannerHeightRaw = showDynamic ? (ctaBlock.bullets?.[5] || '60') : '60';
+        const imgFit = showDynamic ? (ctaBlock.bullets?.[6] || 'cover') : 'cover';
+        
+        // Convert old legacy layout words if any
+        const imgVAlign = imgVAlignRaw === 'top' ? '0%' : imgVAlignRaw === 'center' ? '50%' : imgVAlignRaw === 'bottom' ? '100%' : (isNaN(Number(imgVAlignRaw)) ? imgVAlignRaw : `${imgVAlignRaw}%`);
+        const imgHAlign = imgHAlignRaw === 'left' ? '0%' : imgHAlignRaw === 'center' ? '50%' : imgHAlignRaw === 'right' ? '100%' : (isNaN(Number(imgHAlignRaw)) ? imgHAlignRaw : `${imgHAlignRaw}%`);
+        
+        let heightStyle = { minHeight: '300px' };
+        if (bannerHeightRaw === 'small') heightStyle.height = '40vh';
+        else if (bannerHeightRaw === 'medium') heightStyle.height = '60vh';
+        else if (bannerHeightRaw === 'large') heightStyle.height = '80vh';
+        else if (bannerHeightRaw === 'full') heightStyle.height = '100vh';
+        else if (!isNaN(Number(bannerHeightRaw))) heightStyle.height = `${bannerHeightRaw}vh`;
+        else heightStyle.height = '60vh';
+        
+        const sectionStyle = useParallax ? {
+          backgroundImage: `url(${showDynamic ? (ctaBlock.image_url || LIFESTYLE_IMG) : LIFESTYLE_IMG})`,
+          backgroundAttachment: 'fixed',
+          backgroundPosition: `${imgHAlign} ${imgVAlign}`,
+          backgroundSize: imgFit,
+          backgroundRepeat: 'no-repeat',
+          ...heightStyle
+        } : heightStyle;
+        
+        return (
+          <section
+            ref={s7}
+            style={sectionStyle}
+            className={`relative w-full flex items-center justify-center overflow-hidden reveal-scale ${s7V ? 'revealed' : ''}`}
           >
-            {tContent.cta_btn}
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          </Link>
-        </div>
-      </section>
+            {!useParallax && (
+              <img 
+                src={showDynamic ? (ctaBlock.image_url || LIFESTYLE_IMG) : LIFESTYLE_IMG} 
+                alt="Ha-Kavod 97 lifestyle" 
+                style={{ objectFit: imgFit, objectPosition: `${imgHAlign} ${imgVAlign}` }}
+                className="absolute inset-0 w-full h-full" 
+              />
+            )}
+            <div className="absolute inset-0" style={{ backgroundColor: `rgba(0, 0, 0, ${Number(overlayOpacity) / 100})` }} />
+            <div className={`relative z-10 text-center px-4 reveal-hidden ${s7V ? 'revealed' : ''}`}>
+              <p className="text-[11px] font-bold tracking-[0.5em] uppercase text-accent mb-4 animate-pulse-soft">
+                {showDynamic ? ctaBlock.label : tContent.cta_subtitle}
+              </p>
+              <h2 
+                className="text-4xl md:text-6xl font-black text-white uppercase tracking-tight" 
+                dangerouslySetInnerHTML={{ __html: showDynamic ? ctaBlock.title.replace(/\n/g, '<br />') : tContent.cta_title }} 
+              />
+              <Link
+                to={showDynamic ? (ctaBlock.bullets?.[0] || '/catalog') : '/catalog'}
+                className="group mt-10 inline-flex items-center gap-3 bg-accent hover:bg-white text-neutral-900 font-black px-12 py-5 text-sm uppercase tracking-widest transition-all duration-300"
+              >
+                {showDynamic ? (ctaBlock.description || 'Explorer la boutique') : tContent.cta_btn}
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </div>
+          </section>
+        );
+      })()}
 
     </div>
   );

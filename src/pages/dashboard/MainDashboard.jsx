@@ -6,7 +6,7 @@ import {
   CheckCircle, XCircle, ArrowUpRight, Upload, Play, Ban,
   RefreshCcw, Eye, Search, Sparkles, MoreHorizontal,
   Menu, Grid, ShoppingBag, Maximize, Minimize, Moon, Bell, ChevronDown,
-  User, Settings, Sliders, X, Crown
+  User, Settings, Sliders, X, Crown, Home as HomeIcon
 } from 'lucide-react';
 import adminService from '../../services/api/adminService';
 import authService from '../../services/api/authService';
@@ -14,6 +14,7 @@ import { useSettings } from '../../hooks/useSettings';
 import NotificationTemplates from './notifications/NotificationTemplates';
 import NotificationCampaigns from './notifications/NotificationCampaigns';
 import HeroSlides from './HeroSlides';
+import HomePageEditor from './HomePageEditor';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 
 export const MainDashboard = () => {
@@ -3247,6 +3248,7 @@ export const MainDashboard = () => {
       category_id: categories[0]?.id || '',
       sub_category_id: '',
       description: '',
+      short_description: '',
       is_featured: false
     });
     setTempProductImages([]);
@@ -3287,6 +3289,7 @@ export const MainDashboard = () => {
         category_id: prod.category_id || '',
         sub_category_id: prod.sub_category_id || '',
         description: cleanDesc,
+        short_description: prod.short_description || '',
         is_featured: prod.is_featured || false
       });
       setTempProductImages(prod.images || []);
@@ -3387,6 +3390,7 @@ export const MainDashboard = () => {
           category_id: Number(productForm.category_id),
           sub_category_id: productForm.sub_category_id ? Number(productForm.sub_category_id) : null,
           description: finalDesc,
+          short_description: productForm.short_description,
           is_featured: productForm.is_featured,
           category: categories.find(c => c.id === Number(productForm.category_id)) || { name: 'Maison' }
         };
@@ -3415,6 +3419,7 @@ export const MainDashboard = () => {
           category_id: Number(productForm.category_id),
           sub_category_id: productForm.sub_category_id ? Number(productForm.sub_category_id) : null,
           description: finalDesc,
+          short_description: productForm.short_description,
           is_featured: productForm.is_featured
         };
         const res = await adminService.updateProduct(selectedProduct.id, productData);
@@ -3478,6 +3483,7 @@ export const MainDashboard = () => {
         category_id: Number(productForm.category_id),
         sub_category_id: productForm.sub_category_id ? Number(productForm.sub_category_id) : null,
         description: finalDesc,
+        short_description: productForm.short_description,
         is_featured: productForm.is_featured
       };
       
@@ -4217,15 +4223,15 @@ export const MainDashboard = () => {
   };
 
   return (
-    <div className={`min-h-screen flex text-left font-sans transition-colors duration-300 ${isDarkMode ? 'bg-neutral-950 text-neutral-100' : 'bg-neutral-100 text-neutral-800'}`}>
+    <div className={`min-h-screen flex text-left font-sans transition-colors duration-300 ${isDarkMode ? 'bg-[#110508] text-neutral-100' : 'bg-[#fcfbf9] text-neutral-800'}`}>
       
       {/* ── SIDEBAR DE NAVIGATION ───────────────────────────────────────────── */}
       <aside
-        className="bg-neutral-950 text-white flex flex-col justify-between border-r border-neutral-800/60 shrink-0 transition-all duration-300 overflow-hidden sticky top-0 h-screen"
+        className="bg-[#17070a] text-white flex flex-col justify-between border-r border-white/5 shrink-0 transition-all duration-300 overflow-hidden sticky top-0 h-screen"
         style={{ width: isSidebarCollapsed ? '72px' : '260px' }}
       >
         {/* ── LOGO ── */}
-        <div className="flex flex-col items-center justify-center border-b border-neutral-800/60 py-6 px-4">
+        <div className="flex flex-col items-center justify-center border-b border-white/5 py-6 px-4">
           <img
             src="/logo.png"
             alt="Logo HA-KAVOD 97"
@@ -4249,7 +4255,7 @@ export const MainDashboard = () => {
           <button
             onClick={() => { setActiveTab('dashboard'); setExpandedMenus({ orders: false, products: false, clients: false, settings: false, profile: false }); }}
             title="Tableau de bord"
-            className={`group w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 text-[11px] font-normal uppercase tracking-wider transition-all duration-150 relative ${activeTab === 'dashboard' ? 'bg-primary text-white' : 'text-neutral-400 hover:bg-neutral-900 hover:text-white'}`}
+            className={`group w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 text-[11px] font-normal uppercase tracking-wider transition-all duration-150 relative ${activeTab === 'dashboard' ? 'bg-white/10 text-white shadow-[0_2px_10px_rgba(0,0,0,0.1)]' : 'text-neutral-400 hover:bg-white/5 hover:text-white'}`}
           >
             {activeTab === 'dashboard' && !isSidebarCollapsed && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-accent" />}
             <LayoutDashboard className="w-4 h-4 shrink-0" />
@@ -4257,8 +4263,8 @@ export const MainDashboard = () => {
           </button>
 
           {/* ─ VENTES ─ */}
-          {!isSidebarCollapsed && <p className="text-[8.5px] font-bold tracking-[0.25em] uppercase text-neutral-600 px-3 pt-4 pb-2">Ventes</p>}
-          {isSidebarCollapsed && <div className="my-2 border-t border-neutral-800/60" />}
+          {!isSidebarCollapsed && <p className="text-[8.5px] font-bold tracking-[0.25em] uppercase text-neutral-500 px-3 pt-4 pb-2">Ventes</p>}
+          {isSidebarCollapsed && <div className="my-2 border-t border-white/5" />}
 
           {/* Commandes */}
           <div>
@@ -4268,7 +4274,7 @@ export const MainDashboard = () => {
                 else setExpandedMenus(prev => ({ ...prev, orders: !prev.orders, products: false, clients: false, settings: false, profile: false }));
               }}
               title="Commandes"
-              className={`group w-full flex items-center justify-between px-3 py-2.5 text-[11px] font-normal uppercase tracking-wider transition-all duration-150 relative ${activeTab === 'orders' ? 'bg-neutral-800/70 text-white' : 'text-neutral-400 hover:bg-neutral-900 hover:text-white'}`}
+              className={`group w-full flex items-center justify-between px-3 py-2.5 text-[11px] font-normal uppercase tracking-wider transition-all duration-150 relative ${activeTab === 'orders' ? 'bg-white/10 text-white shadow-[0_2px_10px_rgba(0,0,0,0.1)]' : 'text-neutral-400 hover:bg-white/5 hover:text-white'}`}
             >
               {activeTab === 'orders' && !isSidebarCollapsed && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-accent" />}
               <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center w-full' : 'gap-3'}`}>
@@ -4316,7 +4322,7 @@ export const MainDashboard = () => {
                 else setExpandedMenus(prev => ({ ...prev, products: !prev.products, orders: false, clients: false, settings: false, profile: false }));
               }}
               title="Produits"
-              className={`group w-full flex items-center justify-between px-3 py-2.5 text-[11px] font-normal uppercase tracking-wider transition-all duration-150 relative ${activeTab === 'products' ? 'bg-neutral-800/70 text-white' : 'text-neutral-400 hover:bg-neutral-900 hover:text-white'}`}
+              className={`group w-full flex items-center justify-between px-3 py-2.5 text-[11px] font-normal uppercase tracking-wider transition-all duration-150 relative ${activeTab === 'products' ? 'bg-white/10 text-white shadow-[0_2px_10px_rgba(0,0,0,0.1)]' : 'text-neutral-400 hover:bg-white/5 hover:text-white'}`}
             >
               {activeTab === 'products' && !isSidebarCollapsed && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-accent" />}
               <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center w-full' : 'gap-3'}`}>
@@ -4365,7 +4371,7 @@ export const MainDashboard = () => {
           <button
             onClick={() => { setActiveTab('categories'); setExpandedMenus({ orders: false, products: false, clients: false, settings: false, profile: false }); }}
             title="Catégories"
-            className={`group w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 text-[11px] font-normal uppercase tracking-wider transition-all duration-150 relative ${activeTab === 'categories' ? 'bg-primary text-white' : 'text-neutral-400 hover:bg-neutral-900 hover:text-white'}`}
+            className={`group w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 text-[11px] font-normal uppercase tracking-wider transition-all duration-150 relative ${activeTab === 'categories' ? 'bg-white/10 text-white shadow-[0_2px_10px_rgba(0,0,0,0.1)]' : 'text-neutral-400 hover:bg-white/5 hover:text-white'}`}
           >
             {activeTab === 'categories' && !isSidebarCollapsed && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-accent" />}
             <FolderTree className="w-4 h-4 shrink-0" />
@@ -4376,7 +4382,7 @@ export const MainDashboard = () => {
           <button
             onClick={() => { setActiveTab('attributes'); setExpandedMenus({ orders: false, products: false, clients: false, settings: false, profile: false }); }}
             title="Attributs (Couleurs & Tailles)"
-            className={`group w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 text-[11px] font-normal uppercase tracking-wider transition-all duration-150 relative ${activeTab === 'attributes' ? 'bg-primary text-white' : 'text-neutral-400 hover:bg-neutral-900 hover:text-white'}`}
+            className={`group w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 text-[11px] font-normal uppercase tracking-wider transition-all duration-150 relative ${activeTab === 'attributes' ? 'bg-white/10 text-white shadow-[0_2px_10px_rgba(0,0,0,0.1)]' : 'text-neutral-400 hover:bg-white/5 hover:text-white'}`}
           >
             {activeTab === 'attributes' && !isSidebarCollapsed && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-accent" />}
             <Palette className="w-4 h-4 shrink-0" />
@@ -4391,7 +4397,7 @@ export const MainDashboard = () => {
           <button
             onClick={() => { setActiveTab('users'); setExpandedMenus({ orders: false, products: false, admin: false, profile: false }); }}
             title={t.users}
-            className={`group w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 text-[11px] font-normal uppercase tracking-wider transition-all duration-150 relative ${activeTab === 'users' ? 'bg-primary text-white' : 'text-neutral-400 hover:bg-neutral-900 hover:text-white'}`}
+            className={`group w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 text-[11px] font-normal uppercase tracking-wider transition-all duration-150 relative ${activeTab === 'users' ? 'bg-white/10 text-white shadow-[0_2px_10px_rgba(0,0,0,0.1)]' : 'text-neutral-400 hover:bg-white/5 hover:text-white'}`}
           >
             {activeTab === 'users' && !isSidebarCollapsed && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-accent" />}
             <Users className="w-4 h-4 shrink-0" />
@@ -4402,7 +4408,7 @@ export const MainDashboard = () => {
           <button
             onClick={() => { setActiveTab('clients'); setExpandedMenus({ orders: false, products: false, admin: false, profile: false }); }}
             title={t.clients}
-            className={`group w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 text-[11px] font-normal uppercase tracking-wider transition-all duration-150 relative ${activeTab === 'clients' ? 'bg-primary text-white' : 'text-neutral-400 hover:bg-neutral-900 hover:text-white'}`}
+            className={`group w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 text-[11px] font-normal uppercase tracking-wider transition-all duration-150 relative ${activeTab === 'clients' ? 'bg-white/10 text-white shadow-[0_2px_10px_rgba(0,0,0,0.1)]' : 'text-neutral-400 hover:bg-white/5 hover:text-white'}`}
           >
             {activeTab === 'clients' && !isSidebarCollapsed && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-accent" />}
             <User className="w-4 h-4 shrink-0" />
@@ -4413,22 +4419,22 @@ export const MainDashboard = () => {
           <button
             onClick={() => { setActiveTab('shipping'); setExpandedMenus({ orders: false, products: false, admin: false, profile: false }); }}
             title={t.shipping}
-            className={`group w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 text-[11px] font-normal uppercase tracking-wider transition-all duration-150 relative ${activeTab === 'shipping' ? 'bg-primary text-white' : 'text-neutral-400 hover:bg-neutral-900 hover:text-white'}`}
+            className={`group w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 text-[11px] font-normal uppercase tracking-wider transition-all duration-150 relative ${activeTab === 'shipping' ? 'bg-white/10 text-white shadow-[0_2px_10px_rgba(0,0,0,0.1)]' : 'text-neutral-400 hover:bg-white/5 hover:text-white'}`}
           >
             {activeTab === 'shipping' && !isSidebarCollapsed && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-accent" />}
             <Truck className="w-4 h-4 shrink-0" />
             {!isSidebarCollapsed && <span>{t.shipping}</span>}
           </button>
 
-          {/* Bannières Hero */}
+
           <button
-            onClick={() => { setActiveTab('hero-slides'); setExpandedMenus({ orders: false, products: false, admin: false, profile: false }); }}
-            title={t.heroBanners}
-            className={`group w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 text-[11px] font-normal uppercase tracking-wider transition-all duration-150 relative ${activeTab === 'hero-slides' ? 'bg-primary text-white' : 'text-neutral-400 hover:bg-neutral-900 hover:text-white'}`}
+            onClick={() => { setActiveTab('home-editor'); setExpandedMenus({ orders: false, products: false, admin: false, profile: false }); }}
+            title={t.homeEditor || 'Page d\'accueil'}
+            className={`group w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 text-[11px] font-normal uppercase tracking-wider transition-all duration-150 relative ${activeTab === 'home-editor' ? 'bg-primary text-white' : 'text-neutral-400 hover:bg-neutral-900 hover:text-white'}`}
           >
-            {activeTab === 'hero-slides' && !isSidebarCollapsed && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-accent" />}
-            <Sliders className="w-4 h-4 shrink-0" />
-            {!isSidebarCollapsed && <span>{t.heroBanners}</span>}
+            {activeTab === 'home-editor' && !isSidebarCollapsed && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-accent" />}
+            <HomeIcon className="w-4 h-4 shrink-0" />
+            {!isSidebarCollapsed && <span>{t.homeEditor || 'Page d\'accueil'}</span>}
           </button>
 
           {/* Notifications (Templates & Campaigns) */}
@@ -4439,7 +4445,7 @@ export const MainDashboard = () => {
                 else setExpandedMenus(prev => ({ ...prev, notifications: !prev.notifications, orders: false, products: false, profile: false }));
               }}
               title="Notifications"
-              className={`group w-full flex items-center justify-between px-3 py-2.5 text-[11px] font-normal uppercase tracking-wider transition-all duration-150 relative ${activeTab === 'notifications' ? 'bg-neutral-800/70 text-white' : 'text-neutral-400 hover:bg-neutral-900 hover:text-white'}`}
+              className={`group w-full flex items-center justify-between px-3 py-2.5 text-[11px] font-normal uppercase tracking-wider transition-all duration-150 relative ${activeTab === 'notifications' ? 'bg-white/10 text-white shadow-[0_2px_10px_rgba(0,0,0,0.1)]' : 'text-neutral-400 hover:bg-white/5 hover:text-white'}`}
             >
               {activeTab === 'notifications' && !isSidebarCollapsed && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-accent" />}
               <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center w-full' : 'gap-3'}`}>
@@ -4480,7 +4486,7 @@ export const MainDashboard = () => {
                 else setExpandedMenus(prev => ({ ...prev, profile: !prev.profile, orders: false, products: false, clients: false, settings: false }));
               }}
               title="Mon Profil"
-              className={`group w-full flex items-center justify-between px-3 py-2.5 text-[11px] font-normal uppercase tracking-wider transition-all duration-150 relative ${activeTab === 'profile' ? 'bg-neutral-800/70 text-white' : 'text-neutral-400 hover:bg-neutral-900 hover:text-white'}`}
+              className={`group w-full flex items-center justify-between px-3 py-2.5 text-[11px] font-normal uppercase tracking-wider transition-all duration-150 relative ${activeTab === 'profile' ? 'bg-white/10 text-white shadow-[0_2px_10px_rgba(0,0,0,0.1)]' : 'text-neutral-400 hover:bg-white/5 hover:text-white'}`}
             >
               {activeTab === 'profile' && !isSidebarCollapsed && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-accent" />}
               <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center w-full' : 'gap-3'}`}>
@@ -4539,7 +4545,7 @@ export const MainDashboard = () => {
       <div className="flex-1 flex flex-col min-w-0">
         
         {/* ── HEADER HORIZONTAL GLOBAL (Velzon Style) ────────────────────────── */}
-        <header className={`h-16 flex items-center justify-between px-6 sticky top-0 z-40 transition-colors duration-300 ${isDarkMode ? 'bg-neutral-900 border-b border-neutral-800 text-white shadow-lg' : 'bg-white border-b border-neutral-200 text-neutral-800'}`}>
+        <header className={`h-16 flex items-center justify-between px-6 sticky top-0 z-40 transition-colors duration-300 backdrop-blur-md ${isDarkMode ? 'bg-[#110508]/80 border-b border-white/5 text-white shadow-sm' : 'bg-[#fcfbf9]/80 border-b border-black/5 text-neutral-800 shadow-sm'}`}>
           
           {/* Côté gauche : Hamburger & Recherche */}
           <div className="flex items-center gap-4">
@@ -4769,6 +4775,7 @@ export const MainDashboard = () => {
                   {activeTab === 'attributes' && t.attributes}
                   {activeTab === 'shipping' && t.shipping}
                   {activeTab === 'hero-slides' && t.heroBanners}
+                  {activeTab === 'home-editor' && (t.homeEditor || 'Page d\'accueil')}
                   {activeTab === 'users' && t.users}
                   {activeTab === 'settings' && t.settings}
                   {activeTab === 'notification-templates' && 'Notification Templates'}
@@ -4784,6 +4791,7 @@ export const MainDashboard = () => {
                   {activeTab === 'attributes' && t.attributesDesc}
                   {activeTab === 'shipping' && t.shippingDesc}
                   {activeTab === 'hero-slides' && t.heroBannersDesc}
+                  {activeTab === 'home-editor' && (t.homeEditorDesc || 'Gérez les sections promo, le bloc artisanat et le bandeau CTA de la page d\'accueil.')}
                   {activeTab === 'users' && t.usersDesc}
                   {activeTab === 'settings' && t.settingsDesc}
                   {activeTab === 'notification-templates' && 'Gérez les modèles de notification.'}
@@ -7469,6 +7477,18 @@ export const MainDashboard = () => {
                             })()}
 
                             <div className="flex flex-col gap-1.5">
+                              <label className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Description courte <span className="text-neutral-300 normal-case font-normal tracking-normal">(accroche affichée sur la page d'accueil)</span></label>
+                              <textarea
+                                disabled={isViewMode}
+                                value={productForm.short_description || ''}
+                                onChange={(e) => setProductForm({ ...productForm, short_description: e.target.value })}
+                                rows={2}
+                                placeholder="Ex: Oxford en cuir de crocodile pleine fleur, semelle Blake..."
+                                className="border border-neutral-200 py-2.5 px-3.5 text-xs text-neutral-800 focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950/5 hover:border-neutral-350 transition-all rounded-none w-full bg-white disabled:bg-neutral-50 disabled:text-neutral-400 disabled:cursor-not-allowed shadow-2xs resize-none"
+                              />
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
                               <label className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Description</label>
                               <textarea
                                 disabled={isViewMode}
@@ -8620,8 +8640,8 @@ export const MainDashboard = () => {
             </div>
           )}
 
-          {activeTab === 'hero-slides' && (
-            <HeroSlides
+          {activeTab === 'home-editor' && (
+            <HomePageEditor
               isDarkMode={isDarkMode}
               showConfirm={showConfirm}
               showAlert={showAlert}

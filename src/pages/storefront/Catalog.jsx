@@ -92,6 +92,7 @@ export const adaptProduct = (apiProduct) => {
     images: imageUrls.length > 0 ? imageUrls : [primaryImage],
     colors: colors,
     sizes: sizes,
+    short_description: apiProduct.short_description || '',
     description: apiProduct.description,
     brand: 'Ha-Kavod 97',
     variants: apiProduct.variants || [],

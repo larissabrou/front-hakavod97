@@ -237,11 +237,19 @@ const StorefrontLayout = ({ children }) => {
       try {
         const data = await storeService.getFooter({ lang: activeLocale });
         if (data) {
-          // Si le backend retourne l'objet sous format { success, data } ou directement
           const config = data.data || data;
-          if (config && (config.columns || config.description)) {
-            setFooterConfig(config);
-            localStorage.setItem('storefront_footer_config', JSON.stringify(config));
+          if (config && typeof config === 'object') {
+            const merged = {
+              ...DEFAULT_FOOTER_CONFIG,
+              ...config,
+              socials: {
+                ...DEFAULT_FOOTER_CONFIG.socials,
+                ...(config.socials || {}),
+                ...(config.social || {})
+              }
+            };
+            setFooterConfig(merged);
+            localStorage.setItem('storefront_footer_config', JSON.stringify(merged));
           }
         }
       } catch (e) {

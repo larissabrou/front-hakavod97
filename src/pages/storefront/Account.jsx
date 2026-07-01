@@ -9,6 +9,8 @@ import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../../hooks/useSettings';
 import QuickAddModal from '../../components/product/QuickAddModal';
 import geoService from '../../services/api/geoService';
+import { useGoogleLogin } from '@react-oauth/google';
+import { useFacebookLogin } from '../../hooks/useFacebookLogin';
 
 const CONTENT = {
   fr: {
@@ -282,6 +284,30 @@ const Account = () => {
   const { addToCart } = useCart();
   const navigate = useNavigate();
   const { activeLocale } = useSettings();
+
+  const { login: facebookLogin } = useFacebookLogin({
+    appId: import.meta.env.VITE_FACEBOOK_APP_ID
+  });
+
+  const googleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setLoginLoading(true);
+      setError('');
+      setSuccess('');
+      try {
+        await customerLoginGoogle(tokenResponse.access_token, registerCountry);
+        setSuccess(locale === 'en' ? "Connected with Google!" : "Connecté avec Google !");
+        setTimeout(() => setSuccess(''), 3000);
+      } catch (err) {
+        setError(err.message || "Google Login Failed");
+      } finally {
+        setLoginLoading(false);
+      }
+    },
+    onError: () => {
+      setError("Google Login Failed");
+    }
+  });
 
   const locale = activeLocale === 'en' || activeLocale === 'eng' ? 'en' : 'fr';
   const c = CONTENT[locale];
@@ -752,34 +778,30 @@ const Account = () => {
     }
   };
 
-  const handleSocialGoogle = async () => {
-    setLoginLoading(true);
-    setError('');
-    setSuccess('');
-    try {
-      await customerLoginGoogle('mock-google-token', registerCountry);
-      setSuccess(locale === 'en' ? "Connected with Google!" : "Connecté avec Google !");
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError(err.message || "Google Login Failed");
-    } finally {
-      setLoginLoading(false);
-    }
+  const handleSocialGoogle = () => {
+    googleLogin();
   };
 
-  const handleSocialFacebook = async () => {
-    setLoginLoading(true);
-    setError('');
-    setSuccess('');
-    try {
-      await customerLoginFacebook('mock-facebook-token', registerCountry);
-      setSuccess(locale === 'en' ? "Connected with Facebook!" : "Connecté avec Facebook !");
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError(err.message || "Facebook Login Failed");
-    } finally {
-      setLoginLoading(false);
-    }
+  const handleSocialFacebook = () => {
+    facebookLogin({
+      onResolve: async (response) => {
+        setLoginLoading(true);
+        setError('');
+        setSuccess('');
+        try {
+          await customerLoginFacebook(response.accessToken, registerCountry);
+          setSuccess(locale === 'en' ? "Connected with Facebook!" : "Connecté avec Facebook !");
+          setTimeout(() => setSuccess(''), 3000);
+        } catch (err) {
+          setError(err.message || "Facebook Login Failed");
+        } finally {
+          setLoginLoading(false);
+        }
+      },
+      onReject: (err) => {
+        setError(err.message || "Facebook Login Failed");
+      }
+    });
   };
 
   const handleUpdateProfile = async (e) => {
