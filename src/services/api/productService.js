@@ -42,6 +42,12 @@ export const productService = {
     const response = await apiClient.get('/store/categories');
     return normalizeApiResponse(response);
   },
+
+  // S'inscrire à une alerte de retour en stock
+  subscribeStockAlert: async (data) => {
+    const response = await apiClient.post('/store/stock-alerts', data);
+    return normalizeApiResponse(response);
+  },
 };
 
 export default productService;

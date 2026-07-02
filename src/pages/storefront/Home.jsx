@@ -222,7 +222,7 @@ const DEFAULT_SLIDES = [
 ];
 
 // ── Composant PromoSection ──────────────────────────────────────────────────
-const PromoSection = ({ section, index, formatPrice, heroProductLink, nextSectionRef, viewProductLabel }) => {
+const PromoSection = ({ section, index, formatPrice, nextSectionRef, viewProductLabel }) => {
   const [txtRef, txtV] = useReveal(0.15);
   const [imgRef, imgV] = useReveal(0.1);
 
@@ -311,7 +311,7 @@ const PromoSection = ({ section, index, formatPrice, heroProductLink, nextSectio
         )}
 
         <Link
-          to={section.link || heroProductLink(index)}
+          to={section.link || '/catalog'}
           className={`group mt-8 inline-flex items-center gap-3 ${isDarkTheme ? 'bg-white text-[#17070a] hover:bg-[#c5a059] hover:text-white' : 'bg-[#17070a] hover:bg-[#c5a059] text-white'} font-bold px-10 py-4 text-xs uppercase tracking-widest transition-all duration-300 self-start`}
         >
           {viewProductLabel} <span className="ml-1 group-hover:translate-x-1 transition-transform">→</span>
@@ -357,8 +357,7 @@ export const Home = () => {
   const [featuredLoading, setFeaturedLoading] = useState(true);
   const [featuredError, setFeaturedError] = useState('');
   const nextSectionRef = useRef(null);
-  const heroProductLink = (index) =>
-    featuredProducts[index]?.id ? `/product/${featuredProducts[index].id}` : '/catalog';
+
 
   const [slides, setSlides] = useState(DEFAULT_SLIDES);
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -694,7 +693,7 @@ export const Home = () => {
             discount: item.discount_percent ? `-${item.discount_percent}%` : null,
             sizes: item.sizes || [],
             image: item.image_url || CRAFT_IMG,
-            link: item.cta_url || `/product/${item.product_id}`,
+            link: `/product/${item.product_id}`,
             badge: item.badge || null,
             layout: idx % 2 === 0 ? "image-left" : "image-right",
             active: true
@@ -868,7 +867,6 @@ export const Home = () => {
           section={section} 
           index={idx} 
           formatPrice={formatPrice} 
-          heroProductLink={heroProductLink} 
           nextSectionRef={nextSectionRef} 
           viewProductLabel={tContent.view_product}
         />

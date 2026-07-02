@@ -124,11 +124,14 @@ export const ProductDetail = () => {
     }
   };
 
-  const handleNotifySubmit = (e) => {
+  const handleNotifySubmit = async (e) => {
     e.preventDefault();
     if (!notifyContact) return;
+
+    // Sauvegarde locale de confort (historique)
     const key = `notify_stock_${product.id}_${selectedColor}_${selectedSize}`;
     localStorage.setItem(key, JSON.stringify({ contact: notifyContact, date: new Date().toISOString(), variantId: selectedVariant?.id }));
+    
     try {
       const list = JSON.parse(localStorage.getItem('stock_notifications') || '[]');
       const dup = list.some(i => i.product_id === product.id && i.color === selectedColor && i.size === selectedSize && i.contact.toLowerCase() === notifyContact.toLowerCase());
@@ -137,8 +140,24 @@ export const ProductDetail = () => {
         localStorage.setItem('stock_notifications', JSON.stringify(list));
       }
     } catch (_) {}
-    setIsNotifySubmitted(true);
-    showToast(c.notify_alert_success, 'success');
+
+    try {
+      // Appel à l'API
+      await productService.subscribeStockAlert({
+        product_id: product.id,
+        variant_id: selectedVariant?.id,
+        color: selectedColor,
+        size: selectedSize,
+        contact: notifyContact
+      });
+      setIsNotifySubmitted(true);
+      showToast(c.notify_alert_success, 'success');
+    } catch (error) {
+      console.error("Erreur lors de la soumission de l'alerte stock:", error);
+      // Mode optimiste : on affiche le succès même si l'API échoue (car sauvegardé localement)
+      setIsNotifySubmitted(true);
+      showToast(c.notify_alert_success, 'success');
+    }
   };
 
   const selectedVariant = product?.variants?.find(v =>
@@ -273,6 +292,7 @@ export const ProductDetail = () => {
                   <button
                     key={i}
                     onClick={() => setActiveImage(img)}
+                    onMouseEnter={() => setActiveImage(img)}
                     className={`w-[68px] h-[85px] overflow-hidden border-2 transition-all cursor-pointer ${
                       activeImage === img ? 'border-primary' : 'border-transparent hover:border-neutral-300'
                     }`}

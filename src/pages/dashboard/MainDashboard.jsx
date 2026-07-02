@@ -11,6 +11,7 @@ import {
 import adminService from '../../services/api/adminService';
 import authService from '../../services/api/authService';
 import { useSettings } from '../../hooks/useSettings';
+import StockRequests from './StockRequests';
 import NotificationTemplates from './notifications/NotificationTemplates';
 import NotificationCampaigns from './notifications/NotificationCampaigns';
 import HeroSlides from './HeroSlides';
@@ -1122,6 +1123,8 @@ export const MainDashboard = () => {
         await loadAttributesData();
       } else if (activeTab === 'stock-alerts') {
         await loadStockAlertsData();
+      } else if (activeTab === 'stock-requests') {
+        // No specific data loading required here, StockRequests handles its own fetching
       } else if (activeTab === 'settings' || activeTab === 'shipping' || activeTab === 'users') {
         await loadSettingsData();
       }
@@ -4435,6 +4438,16 @@ export const MainDashboard = () => {
             {activeTab === 'home-editor' && !isSidebarCollapsed && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-accent" />}
             <HomeIcon className="w-4 h-4 shrink-0" />
             {!isSidebarCollapsed && <span>{t.homeEditor || 'Page d\'accueil'}</span>}
+          </button>
+          {/* Demandes de Réassort */}
+          <button
+            onClick={() => setActiveTab('stock-requests')}
+            className={`group w-full flex items-center ${isSidebarCollapsed ? 'justify-center' : 'gap-3'} px-3 py-2.5 text-[11px] font-normal uppercase tracking-wider transition-all duration-150 relative ${activeTab === 'stock-requests' ? 'bg-white/10 text-white shadow-[0_2px_10px_rgba(0,0,0,0.1)]' : 'text-neutral-400 hover:bg-white/5 hover:text-white'}`}
+            title={isSidebarCollapsed ? "Demandes de Réassort" : ""}
+          >
+            {activeTab === 'stock-requests' && !isSidebarCollapsed && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-accent" />}
+            <Bell size={18} className={activeTab === 'stock-requests' ? 'text-accent' : 'text-neutral-400 group-hover:text-white transition-colors'} />
+            {!isSidebarCollapsed && <span>Demandes de Réassort</span>}
           </button>
 
           {/* Notifications (Templates & Campaigns) */}
@@ -8889,6 +8902,15 @@ export const MainDashboard = () => {
                   </tbody>
                 </table>
               </div>
+            </div>
+          )}
+
+          {/* ──────────────────────────────────────────────────────────────────
+              TAB - DEMANDES DE RÉASSORT
+              ────────────────────────────────────────────────────────────────── */}
+          {activeTab === 'stock-requests' && (
+            <div className="animate-fade-in">
+              <StockRequests />
             </div>
           )}
 

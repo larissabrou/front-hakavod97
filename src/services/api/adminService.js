@@ -22,6 +22,16 @@ export const adminService = {
     return response.data;
   },
 
+  getCustomerStockRequests: async () => {
+    const response = await apiClient.get('/admin/dashboard/stock-requests');
+    return response.data;
+  },
+
+  markStockRequestTreated: async (id) => {
+    const response = await apiClient.post(`/admin/dashboard/stock-requests/${id}/treat`);
+    return response.data;
+  },
+
   // ── COMMANDES (ORDERS) ────────────────────────────────────────────────────
   getOrders: async (params = {}) => {
     const response = await apiClient.get('/admin/orders', { params });
