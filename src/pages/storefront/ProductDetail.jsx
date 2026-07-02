@@ -265,7 +265,7 @@ export const ProductDetail = () => {
   );
 
   return (
-    <div className="w-full animate-fade-in bg-neutral-50">
+    <div className="w-full animate-fade-in bg-neutral-50 relative z-10">
 
       {/* ── Breadcrumb ── */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 pt-5 pb-2">
@@ -494,37 +494,37 @@ export const ProductDetail = () => {
             )}
 
             {/* CTA — Quantité + Panier + Favoris */}
-            <div className="flex gap-3 fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-neutral-200 z-40 md:relative md:p-0 md:bg-transparent md:border-t-0 md:z-auto shadow-[0_-10px_30px_rgba(0,0,0,0.05)] md:shadow-none md:pt-5 md:pb-2">
+            <div className="flex items-center gap-2 md:gap-3 fixed bottom-0 left-0 right-0 p-3 md:p-0 bg-white/95 backdrop-blur-md border-t border-neutral-200/60 z-40 md:relative md:bg-transparent md:border-t-0 md:z-auto shadow-[0_-12px_40px_rgba(0,0,0,0.06)] md:shadow-none md:pt-5 md:pb-2">
               {maxStock > 0 && (
-                <div className="flex border border-neutral-300 h-[52px] shrink-0">
-                  <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-11 text-neutral-500 text-lg hover:bg-neutral-50 hover:text-primary transition-colors cursor-pointer">−</button>
-                  <span className="w-10 flex items-center justify-center text-sm font-black text-neutral-900">{quantity}</span>
-                  <button onClick={() => setQuantity(q => q + 1)} disabled={quantity >= maxStock} className="w-11 text-neutral-500 text-lg hover:bg-neutral-50 hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer">+</button>
+                <div className="flex bg-neutral-100/80 h-[48px] md:h-[52px] shrink-0 border border-neutral-200/50">
+                  <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-10 md:w-11 text-neutral-500 text-lg hover:bg-white hover:text-primary transition-all cursor-pointer flex items-center justify-center">−</button>
+                  <span className="w-8 md:w-10 flex items-center justify-center text-sm font-black text-neutral-900">{quantity}</span>
+                  <button onClick={() => setQuantity(q => q + 1)} disabled={quantity >= maxStock} className="w-10 md:w-11 text-neutral-500 text-lg hover:bg-white hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center justify-center">+</button>
                 </div>
               )}
 
               {maxStock > 0 ? (
                 <button
                   onClick={handleAddToCart}
-                  className="flex-1 h-[52px] bg-primary hover:bg-primary-dark text-white font-black text-[11px] uppercase tracking-[0.18em] flex items-center justify-center gap-2.5 transition-colors cursor-pointer shadow-sm"
+                  className="flex-1 h-[48px] md:h-[52px] bg-primary hover:bg-primary-dark text-white font-black text-[10px] sm:text-[11px] uppercase tracking-wider md:tracking-[0.18em] flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer shadow-lg shadow-primary/20 overflow-hidden px-2"
                 >
-                  <ShoppingBag className="w-4 h-4" />
-                  {t('add_to_cart')}
+                  <ShoppingBag className="w-4 h-4 shrink-0 hidden xs:block" />
+                  <span className="whitespace-nowrap truncate">{t('add_to_cart')}</span>
                 </button>
               ) : (
                 <button
                   onClick={handleNotifyClick}
-                  className="flex-1 h-[52px] border-2 border-primary text-primary hover:bg-primary hover:text-white font-black text-[11px] uppercase tracking-[0.18em] flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  className="flex-1 h-[48px] md:h-[52px] border-2 border-primary text-primary hover:bg-primary hover:text-white font-black text-[10px] sm:text-[11px] uppercase tracking-wider md:tracking-[0.18em] flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer px-2"
                 >
-                  {c.notify_stock_return}
+                  <span className="whitespace-nowrap truncate">{c.notify_stock_return}</span>
                 </button>
               )}
 
               <button
                 onClick={() => toggleFavorite(product)}
                 title={isFavorite(product.id) ? c.remove_from_favorites : c.add_to_favorites}
-                className={`w-[52px] h-[52px] border flex items-center justify-center transition-all cursor-pointer ${
-                  isFavorite(product.id) ? 'border-primary/30 bg-primary/5' : 'border-neutral-300 hover:border-primary/40'
+                className={`w-[48px] h-[48px] md:w-[52px] md:h-[52px] border flex items-center justify-center transition-all active:scale-[0.92] cursor-pointer shrink-0 ${
+                  isFavorite(product.id) ? 'border-primary/30 bg-primary/5 shadow-inner' : 'border-neutral-200/80 bg-neutral-50/50 hover:bg-neutral-100 hover:border-neutral-300'
                 }`}
               >
                 <Heart className={`w-5 h-5 transition-colors ${
