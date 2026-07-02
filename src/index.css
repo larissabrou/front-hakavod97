@@ -59,6 +59,15 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--color-neutral-300); border-radius: 0px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--color-neutral-400); }
 
+/* Hide scrollbar utility for carousels */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* ── Selection ── */
 ::selection { background-color: var(--color-accent); color: #ffffff; }
 

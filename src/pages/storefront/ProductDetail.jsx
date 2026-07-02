@@ -284,49 +284,55 @@ export const ProductDetail = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_460px] gap-8 xl:gap-14 items-start">
 
           {/* ─── Gallery ─── */}
-          <div className="flex gap-3">
-            {/* Vignettes desktop */}
-            {product.images?.length > 1 && (
-              <div className="hidden md:flex flex-col gap-2 w-[68px] shrink-0">
-                {product.images.map((img, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setActiveImage(img)}
-                    onMouseEnter={() => setActiveImage(img)}
-                    className={`w-[68px] h-[85px] overflow-hidden border-2 transition-all cursor-pointer ${
-                      activeImage === img ? 'border-primary' : 'border-transparent hover:border-neutral-300'
-                    }`}
-                  >
-                    <img src={img} alt="" className="w-full h-full object-cover" />
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Image principale */}
-            <div className="flex-1 relative bg-neutral-100 overflow-hidden">
-              <div className="aspect-[4/5]">
-                <img src={activeImage} alt={product.name} className="w-full h-full object-cover" />
-              </div>
-              {/* Badge promo */}
-              {discountPct && (
-                <span className="absolute top-3 left-3 bg-primary text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-1 leading-none">
-                  -{discountPct}%
-                </span>
-              )}
+          <div className="w-full">
+            {/* --- MOBILE GALLERY (Swipeable Carousel) --- */}
+            <div className="md:hidden flex overflow-x-auto snap-x snap-mandatory scrollbar-hide -mx-4 px-4 gap-2">
+              {product.images?.map((img, i) => (
+                <div key={i} className="w-[85vw] shrink-0 snap-center relative aspect-[4/5] bg-neutral-100 overflow-hidden">
+                  <img src={img} alt={`${product.name} ${i + 1}`} className="w-full h-full object-cover" />
+                  {/* Badge promo sur la première image */}
+                  {discountPct && i === 0 && (
+                    <span className="absolute top-3 left-3 bg-primary text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-1 leading-none z-10">
+                      -{discountPct}%
+                    </span>
+                  )}
+                </div>
+              ))}
             </div>
+            
+            {/* --- DESKTOP GALLERY --- */}
+            <div className="hidden md:flex gap-3">
+              {/* Vignettes desktop */}
+              {product.images?.length > 1 && (
+                <div className="flex flex-col gap-2 w-[68px] shrink-0">
+                  {product.images.map((img, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setActiveImage(img)}
+                      onMouseEnter={() => setActiveImage(img)}
+                      className={`w-[68px] h-[85px] overflow-hidden border-2 transition-all cursor-pointer ${
+                        activeImage === img ? 'border-primary' : 'border-transparent hover:border-neutral-300'
+                      }`}
+                    >
+                      <img src={img} alt="" className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
 
-            {/* Vignettes mobile */}
-            {product.images?.length > 1 && (
-              <div className="flex md:hidden gap-2 mt-2">
-                {product.images.map((img, i) => (
-                  <button key={i} onClick={() => setActiveImage(img)}
-                    className={`w-14 h-16 overflow-hidden border-2 cursor-pointer ${activeImage === img ? 'border-primary' : 'border-transparent'}`}>
-                    <img src={img} alt="" className="w-full h-full object-cover" />
-                  </button>
-                ))}
+              {/* Image principale */}
+              <div className="flex-1 relative bg-neutral-100 overflow-hidden">
+                <div className="aspect-[4/5]">
+                  <img src={activeImage} alt={product.name} className="w-full h-full object-cover" />
+                </div>
+                {/* Badge promo */}
+                {discountPct && (
+                  <span className="absolute top-3 left-3 bg-primary text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-1 leading-none">
+                    -{discountPct}%
+                  </span>
+                )}
               </div>
-            )}
+            </div>
           </div>
 
           {/* ─── Panneau info ─── */}
@@ -488,7 +494,7 @@ export const ProductDetail = () => {
             )}
 
             {/* CTA — Quantité + Panier + Favoris */}
-            <div className="pt-5 pb-2 flex gap-3">
+            <div className="flex gap-3 fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-neutral-200 z-40 md:relative md:p-0 md:bg-transparent md:border-t-0 md:z-auto shadow-[0_-10px_30px_rgba(0,0,0,0.05)] md:shadow-none md:pt-5 md:pb-2">
               {maxStock > 0 && (
                 <div className="flex border border-neutral-300 h-[52px] shrink-0">
                   <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="w-11 text-neutral-500 text-lg hover:bg-neutral-50 hover:text-primary transition-colors cursor-pointer">−</button>
