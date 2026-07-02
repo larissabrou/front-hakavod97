@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ShoppingBag, Heart, ShieldCheck, Truck, RotateCcw, CheckCircle, ChevronDown, ChevronUp, Ruler } from 'lucide-react';
+import { ShoppingBag, Heart, ShieldCheck, Truck, RotateCcw, CheckCircle, ChevronDown, ChevronUp, Ruler, ArrowRight } from 'lucide-react';
 import { useCart } from '../../hooks/useCart';
 import { useSettings } from '../../hooks/useSettings';
 import { useFavorites } from '../../hooks/useFavorites';
@@ -67,24 +67,26 @@ const CONTENT = {
 const Accordion = ({ label, children, defaultOpen = false }) => {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border-t border-neutral-200">
+    <div className="border-t border-neutral-200/60">
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between py-4 text-left group cursor-pointer"
+        className="w-full flex items-center justify-between py-5 text-left group cursor-pointer"
       >
-        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-600 group-hover:text-primary transition-colors">
+        <span className="text-[12px] font-medium uppercase tracking-widest text-neutral-900 group-hover:text-primary transition-colors">
           {label}
         </span>
-        {open
-          ? <ChevronUp className="w-3.5 h-3.5 text-accent shrink-0" />
-          : <ChevronDown className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
-        }
+        <span className="relative flex items-center justify-center w-4 h-4 shrink-0">
+          <span className="absolute w-3 h-[1px] bg-neutral-900 transition-transform duration-300" />
+          <span className={`absolute h-3 w-[1px] bg-neutral-900 transition-transform duration-300 ${open ? 'rotate-90 scale-0 opacity-0' : 'rotate-0 scale-100 opacity-100'}`} />
+        </span>
       </button>
-      {open && (
-        <div className="pb-5 text-[13px] text-neutral-500 leading-relaxed">
-          {children}
+      <div className={`grid transition-all duration-300 ease-in-out ${open ? 'grid-rows-[1fr] opacity-100 pb-5' : 'grid-rows-[0fr] opacity-0'}`}>
+        <div className="overflow-hidden">
+          <div className="text-[13px] text-neutral-500 leading-relaxed font-light">
+            {children}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };
@@ -109,7 +111,12 @@ export const ProductDetail = () => {
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [notifyContact, setNotifyContact] = useState('');
   const [isNotifySubmitted, setIsNotifySubmitted] = useState(false);
+  const [showSwipeHint, setShowSwipeHint] = useState(true);
   const notifyInputRef = useRef(null);
+
+  useEffect(() => {
+    if (product) setShowSwipeHint(true);
+  }, [product]);
 
   useEffect(() => {
     if (customerUser) setNotifyContact(customerUser.email || customerUser.phone || '');
@@ -284,15 +291,26 @@ export const ProductDetail = () => {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_460px] gap-8 xl:gap-14 items-start">
 
           {/* ─── Gallery ─── */}
-          <div className="w-full">
-            {/* --- MOBILE GALLERY (Swipeable Carousel) --- */}
-            <div className="md:hidden flex overflow-x-auto snap-x snap-mandatory scrollbar-hide -mx-4 px-4 gap-2">
+          <div className="w-full relative">
+            {/* --- MOBILE GALLERY (Edge-to-edge Swipeable Carousel) --- */}
+            <div 
+              className="md:hidden flex overflow-x-auto snap-x snap-mandatory scrollbar-hide -mx-4"
+              onScroll={() => showSwipeHint && setShowSwipeHint(false)}
+            >
               {product.images?.map((img, i) => (
-                <div key={i} className="w-[85vw] shrink-0 snap-center relative aspect-[4/5] bg-neutral-100 overflow-hidden">
+                <div key={i} className="w-screen shrink-0 snap-center relative aspect-[4/5] bg-neutral-100 overflow-hidden">
                   <img src={img} alt={`${product.name} ${i + 1}`} className="w-full h-full object-cover" />
+                  
+                  {/* Flèche éphémère (Swipe hint) */}
+                  {i === 0 && showSwipeHint && product.images?.length > 1 && (
+                    <div className="absolute top-1/2 right-4 -translate-y-1/2 bg-black/40 text-white p-3 rounded-full backdrop-blur-sm pointer-events-none transition-opacity duration-500 animate-pulse">
+                      <ArrowRight className="w-5 h-5" />
+                    </div>
+                  )}
+
                   {/* Badge promo sur la première image */}
                   {discountPct && i === 0 && (
-                    <span className="absolute top-3 left-3 bg-primary text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-1 leading-none z-10">
+                    <span className="absolute top-4 left-4 bg-primary text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 leading-none z-10">
                       -{discountPct}%
                     </span>
                   )}
@@ -300,7 +318,7 @@ export const ProductDetail = () => {
               ))}
             </div>
             
-            {/* --- DESKTOP GALLERY --- */}
+            {/* --- DESKTOP GALLERY (Classic Layout) --- */}
             <div className="hidden md:flex gap-3">
               {/* Vignettes desktop */}
               {product.images?.length > 1 && (
@@ -321,13 +339,13 @@ export const ProductDetail = () => {
               )}
 
               {/* Image principale */}
-              <div className="flex-1 relative bg-neutral-100 overflow-hidden">
+              <div className="flex-1 relative bg-neutral-100 overflow-hidden group">
                 <div className="aspect-[4/5]">
-                  <img src={activeImage} alt={product.name} className="w-full h-full object-cover" />
+                  <img src={activeImage} alt={product.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                 </div>
                 {/* Badge promo */}
                 {discountPct && (
-                  <span className="absolute top-3 left-3 bg-primary text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-1 leading-none">
+                  <span className="absolute top-4 left-4 bg-primary text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 leading-none z-10 shadow-sm">
                     -{discountPct}%
                   </span>
                 )}
@@ -339,24 +357,24 @@ export const ProductDetail = () => {
           <div className="lg:sticky lg:top-6 flex flex-col bg-white border border-neutral-200 px-6 py-7">
 
             {/* Marque + Nom + Accroche */}
-            <div className="pb-5 border-b border-neutral-200">
-              <p className="text-[9px] font-black uppercase tracking-[0.3em] text-accent mb-2">{product.brand}</p>
-              <h1 className="text-[26px] font-black text-neutral-900 leading-tight tracking-tight mb-3 font-serif">
+            <div className="pb-8">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.4em] text-neutral-500 mb-4">{product.brand}</p>
+              <h1 className="text-3xl md:text-4xl lg:text-[40px] font-serif text-neutral-900 leading-[1.1] tracking-tight mb-5">
                 {product.name}
               </h1>
               {product.short_description && (
-                <p className="text-[13px] text-neutral-500 leading-relaxed">{product.short_description}</p>
+                <p className="text-[14px] text-neutral-500 leading-relaxed font-light">{product.short_description}</p>
               )}
             </div>
 
             {/* Prix */}
-            <div className="py-5 border-b border-neutral-200 flex items-baseline gap-3 flex-wrap">
-              <span className="text-2xl font-black text-primary">{formatPrice(product.price)}</span>
+            <div className="pb-8 border-b border-neutral-200/60 flex items-center gap-4 flex-wrap">
+              <span className="text-3xl lg:text-[40px] font-black tracking-tight text-primary drop-shadow-sm">{formatPrice(product.price)}</span>
               {product.old_price && (
                 <>
-                  <span className="text-base text-neutral-400 line-through font-medium">{formatPrice(product.old_price)}</span>
+                  <span className="text-xl lg:text-2xl text-neutral-400 line-through font-light">{formatPrice(product.old_price)}</span>
                   {discountPct && (
-                    <span className="text-[11px] font-black text-white bg-primary px-2 py-0.5 leading-snug">
+                    <span className="text-[12px] font-black text-white bg-accent px-3 py-1.5 leading-snug rounded-sm shadow-md">
                       −{discountPct}%
                     </span>
                   )}
@@ -366,39 +384,37 @@ export const ProductDetail = () => {
 
             {/* Couleurs */}
             {product.colors?.length > 0 && (
-              <div className="py-5 border-b border-neutral-200">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500 mb-3">
+              <div className="py-8 border-b border-neutral-200/60">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-900 mb-4 flex items-center">
                   {t('color')}
-                  <span className="text-neutral-300 mx-2">—</span>
-                  <span className="text-neutral-700 normal-case tracking-normal font-semibold">
+                  <span className="text-neutral-300 mx-3">|</span>
+                  <span className="text-neutral-500 normal-case tracking-normal font-normal">
                     {translateColor(selectedColor, activeLocale)}
                   </span>
                 </p>
-                <div className="flex gap-2.5 flex-wrap">
+                <div className="flex gap-4 flex-wrap">
                   {product.colors.map(color => (
                     <button
                       key={color.name}
                       onClick={() => setSelectedColor(color.name)}
                       title={translateColor(color.name, activeLocale)}
-                      style={{ backgroundColor: color.code }}
-                      className={`w-8 h-8 border-2 transition-all duration-150 cursor-pointer ${
-                        selectedColor === color.name
-                          ? 'ring-2 ring-offset-2 ring-primary border-primary'
-                          : 'border-transparent hover:border-neutral-400'
-                      }`}
-                    />
+                      className="relative w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer"
+                    >
+                      {/* Anneau externe actif */}
+                      <span className={`absolute inset-0 rounded-full border transition-all duration-300 ${selectedColor === color.name ? 'border-neutral-900 scale-125' : 'border-transparent scale-100 hover:border-neutral-300 hover:scale-110'}`} />
+                      {/* Couleur pleine */}
+                      <span className="w-full h-full rounded-full border border-black/5" style={{ backgroundColor: color.code }} />
+                    </button>
                   ))}
                   {(product.colorLinks || []).map(link => (
                     <Link
                       key={link.product_id}
                       to={`/product/${link.product_id}`}
                       title={c.view_in_color.replace('{color}', translateColor(link.color_name, activeLocale))}
-                      style={{ backgroundColor: link.color_code }}
-                      className="w-8 h-8 border-2 border-transparent hover:border-accent transition-all relative group cursor-pointer"
+                      className="relative w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 cursor-pointer"
                     >
-                      <span className="absolute inset-0 flex items-center justify-center">
-                        <span className="w-1.5 h-1.5 bg-white rounded-full opacity-60 group-hover:opacity-100 transition-opacity" />
-                      </span>
+                      <span className="absolute inset-0 rounded-full border border-transparent scale-100 hover:border-neutral-300 hover:scale-110 transition-all duration-300" />
+                      <span className="w-full h-full rounded-full border border-black/5" style={{ backgroundColor: link.color_code }} />
                     </Link>
                   ))}
                 </div>
@@ -407,19 +423,19 @@ export const ProductDetail = () => {
 
             {/* Tailles */}
             {product.sizes?.length > 0 && (
-              <div className="py-5 border-b border-neutral-200">
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500">
+              <div className="py-8 border-b border-neutral-200/60">
+                <div className="flex items-center justify-between mb-5">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-900 flex items-center">
                     {t('size')}
-                    <span className="text-neutral-300 mx-2">—</span>
-                    <span className="text-neutral-700 normal-case tracking-normal font-semibold">{selectedSize}</span>
+                    <span className="text-neutral-300 mx-3">|</span>
+                    <span className="text-neutral-500 normal-case tracking-normal font-normal">{selectedSize}</span>
                   </p>
-                  <button className="flex items-center gap-1 text-[10px] text-neutral-400 hover:text-primary transition-colors font-bold uppercase tracking-wider cursor-pointer">
-                    <Ruler className="w-3 h-3" />{t('size_guide')}
+                  <button className="flex items-center gap-1.5 text-[11px] text-neutral-500 hover:text-neutral-900 transition-colors uppercase tracking-widest cursor-pointer underline underline-offset-4 decoration-neutral-300 hover:decoration-neutral-900">
+                    {t('size_guide')}
                   </button>
                 </div>
 
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-3 flex-wrap">
                   {product.sizes.map(size => {
                     const stock = getSizeStock(size);
                     const sel = selectedSize === size;
@@ -428,14 +444,14 @@ export const ProductDetail = () => {
                       <button
                         key={size}
                         onClick={() => setSelectedSize(size)}
-                        className={`relative min-w-[46px] h-[46px] px-2 text-sm font-bold border transition-all cursor-pointer ${
+                        className={`relative min-w-[50px] h-[40px] px-3 text-[13px] transition-all cursor-pointer border ${
                           oos
                             ? sel
                               ? 'border-neutral-300 text-neutral-400 bg-neutral-50'
-                              : 'border-neutral-200 text-neutral-300 hover:border-neutral-300'
+                              : 'border-neutral-200 text-neutral-300'
                             : sel
-                            ? 'border-primary bg-primary text-white shadow-sm'
-                            : 'border-neutral-300 text-neutral-700 hover:border-primary hover:text-primary'
+                            ? 'border-neutral-900 bg-neutral-900 text-white font-medium shadow-md shadow-neutral-900/10'
+                            : 'border-neutral-200 text-neutral-600 hover:border-neutral-900 hover:text-neutral-900'
                         }`}
                       >
                         {size}
@@ -451,13 +467,13 @@ export const ProductDetail = () => {
 
                 {/* Alerte stock */}
                 {maxStock > 0 && maxStock <= 5 && (
-                  <p className="mt-3 flex items-center gap-2 text-[11px] font-semibold text-primary bg-primary/5 border border-primary/20 px-3 py-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shrink-0" />
+                  <p className="mt-4 flex items-center gap-2 text-[12px] font-medium text-accent">
+                    <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse shrink-0" />
                     {c.hurry_only_items_left.replace('{count}', String(maxStock)).replace(/\{plural\}/g, maxStock > 1 ? 's' : '')}
                   </p>
                 )}
                 {maxStock > 5 && (
-                  <p className="mt-3 flex items-center gap-2 text-[11px] font-semibold text-accent-dark">
+                  <p className="mt-4 flex items-center gap-2 text-[12px] font-medium text-accent-dark">
                     <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse shrink-0" />
                     {c.in_stock_msg}
                   </p>
@@ -467,15 +483,15 @@ export const ProductDetail = () => {
 
             {/* Rupture de stock — formulaire alerte */}
             {maxStock === 0 && (
-              <div className="py-5 border-b border-neutral-200">
-                <p className="text-[11px] font-black uppercase tracking-wider text-primary mb-1">{c.out_of_stock_label}</p>
-                <p className="text-[12px] text-neutral-400 mb-3 leading-relaxed">{c.out_of_stock_desc}</p>
+              <div className="py-6 border-b border-neutral-200/60">
+                <p className="text-[12px] uppercase tracking-widest text-neutral-900 mb-2 font-medium">{c.out_of_stock_label}</p>
+                <p className="text-[13px] text-neutral-500 mb-4 leading-relaxed font-light">{c.out_of_stock_desc}</p>
                 {isNotifySubmitted ? (
-                  <div className="flex items-center gap-2 text-[12px] font-semibold text-accent-dark bg-accent/10 border border-accent/30 px-3 py-2.5">
-                    <CheckCircle className="w-4 h-4 shrink-0 text-accent" />{c.notify_stock_success}
+                  <div className="flex items-center gap-2 text-[13px] text-green-700 bg-green-50 border border-green-200 px-4 py-3">
+                    <CheckCircle className="w-4 h-4 shrink-0 text-green-600" />{c.notify_stock_success}
                   </div>
                 ) : (
-                  <form onSubmit={handleNotifySubmit} className="flex gap-2">
+                  <form onSubmit={handleNotifySubmit} className="flex gap-0 border border-neutral-300 focus-within:border-neutral-900 transition-colors">
                     <input
                       ref={notifyInputRef}
                       type="text"
@@ -483,9 +499,9 @@ export const ProductDetail = () => {
                       value={notifyContact}
                       onChange={e => setNotifyContact(e.target.value)}
                       required
-                      className="flex-1 border border-neutral-300 text-xs px-3 py-2.5 focus:outline-none focus:border-primary text-neutral-800 bg-white"
+                      className="flex-1 text-[13px] px-4 py-3 focus:outline-none text-neutral-800 bg-white"
                     />
-                    <button type="submit" className="bg-primary hover:bg-primary-dark text-white text-[11px] font-black uppercase tracking-wider px-4 py-2.5 transition-colors cursor-pointer shrink-0">
+                    <button type="submit" className="bg-neutral-900 hover:bg-neutral-800 text-white text-[11px] uppercase tracking-widest px-6 py-3 transition-colors cursor-pointer shrink-0">
                       {c.validate}
                     </button>
                   </form>

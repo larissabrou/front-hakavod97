@@ -303,16 +303,14 @@ export const MobileMenu = ({ isOpen, onClose, onOpenAuth }) => {
                 </button>
               </div>
             ) : (
-              <button
-                onClick={() => {
-                  onClose();
-                  onOpenAuth(); // Ouvre le tiroir de connexion
-                }}
+              <Link
+                to="/account"
+                onClick={onClose}
                 className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-neutral-800 text-white text-[10px] font-bold uppercase tracking-widest py-3 transition-colors font-semibold shadow-xs"
               >
                 <User className="w-3.5 h-3.5" />
                 <span>{activeLocale === 'en' ? "Log in" : "Se connecter"}</span>
-              </button>
+              </Link>
             )}
 
           </div>

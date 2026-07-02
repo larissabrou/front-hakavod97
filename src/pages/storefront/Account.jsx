@@ -11,6 +11,7 @@ import QuickAddModal from '../../components/product/QuickAddModal';
 import geoService from '../../services/api/geoService';
 import { useGoogleLogin } from '@react-oauth/google';
 import { useFacebookLogin } from '../../hooks/useFacebookLogin';
+import heroImg from '../../assets/hero.png';
 
 const CONTENT = {
   fr: {
@@ -330,7 +331,8 @@ const Account = () => {
   const [activeQuickAddProduct, setActiveQuickAddProduct] = useState(null);
 
   // États pour la connexion / inscription pro
-  const [authMode, setAuthMode] = useState('login'); // 'login' | 'register'
+
+  const [authMode, setAuthMode] = useState('login');
   const [loginMethod, setLoginMethod] = useState('email'); // 'email' | 'phone'
   const [registerMethod, setRegisterMethod] = useState('email'); // 'email' | 'phone'
 
@@ -548,7 +550,7 @@ const Account = () => {
       }
     };
 
-    Promise.all([loadScript(), getLogoBase64()]).then(([_, logoBase64]) => {
+    Promise.all([loadScript(), getLogoBase64()]).then(([, logoBase64]) => {
       const wrapper = document.createElement('div');
       wrapper.style.position = 'fixed';
       wrapper.style.top = '0';
@@ -600,6 +602,9 @@ const Account = () => {
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState('');
+  const [loginPhone, setLoginPhone] = useState('');
+  const [otpPhone, setOtpPhone] = useState('');
+  const [otpCountry, setOtpCountry] = useState('CI');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
@@ -746,7 +751,6 @@ const Account = () => {
       } else {
         await customerRegisterPhone(registerPhone, registerName, registerCountry);
         setOtpPhone(registerPhone);
-        setOtpName(registerName);
         setOtpCountry(registerCountry);
         setOtpStep(true);
         setSuccess(locale === 'en' ? "OTP code sent by SMS!" : "Code OTP envoyé par SMS !");
@@ -901,7 +905,7 @@ const Account = () => {
       setAddresses(Array.isArray(addrs) ? addrs : (addrs?.data || addrs || []));
       setSuccess(c.address_delete_success);
       setTimeout(() => setSuccess(''), 3500);
-    } catch (err) {
+    } catch {
       setError(c.address_delete_error);
     }
   };
@@ -957,298 +961,143 @@ const Account = () => {
   }
 
   return (
-    <div className="w-full min-h-screen bg-neutral-50 text-neutral-900 pt-24 md:pt-24 pb-24 font-sans animate-fade-in">
-      <div className="max-w-7xl mx-auto px-6">
-        
-
+    <div className={`w-full min-h-screen bg-neutral-50 text-neutral-900 ${isAuthenticated ? "pt-24 md:pt-32 pb-24" : "pt-[104px] pb-0"} font-sans animate-fade-in`}>
         {!isAuthenticated ? (
-          /* ── NOT AUTHENTICATED: Luxury Login Screen ── */
-          <div className="max-w-5xl mx-auto bg-white border border-neutral-200 shadow-md rounded-2xl overflow-hidden flex flex-col md:flex-row min-h-[600px] transition-all">
-            
-            {/* Left Column: Form */}
-            <div className="w-full md:w-1/2 p-8 md:p-12 lg:p-16 flex flex-col justify-center transition-all">
-              <div className="mb-8 text-left">
-                <span className="text-[10px] uppercase tracking-[0.25em] text-accent font-bold block mb-3">Maison HA-KAVOD 97</span>
-                <h1 className="text-3xl font-serif text-primary font-normal tracking-wide">{authMode === 'login' ? c.my_account : (locale === 'en' ? 'Create Account' : 'Créer un compte')}</h1>
-                <p className="text-xs text-neutral-500 mt-3 leading-relaxed font-light">{authMode === 'login' ? c.login_desc : (locale === 'en' ? 'Register to manage your orders and addresses.' : 'Inscrivez-vous pour suivre vos commandes et gérer vos adresses.')}</p>
+          /* ── NOT AUTHENTICATED: Split Layout for well-occupied space ── */
+          <div className="min-h-[calc(100vh-104px)] flex flex-col md:flex-row w-full bg-white shadow-2xl">
+            {/* LEFT SIDE: Luxury Image Banner */}
+            <div className="hidden md:flex md:w-1/2 relative overflow-hidden bg-neutral-900 group">
+              <img 
+                src={heroImg} 
+                alt="Maison Hakavod" 
+                className="absolute inset-0 w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-1000"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+              <div className="absolute inset-0 flex flex-col justify-end p-16 pb-24 text-white">
+                <h2 className="text-4xl lg:text-5xl font-extrabold uppercase tracking-[0.2em] mb-4 drop-shadow-lg">
+                  Maison<br/>Ha-Kavod 97
+                </h2>
+                <div className="w-12 h-1 bg-primary mb-6"></div>
+                <p className="text-sm lg:text-base tracking-widest font-light max-w-md leading-relaxed drop-shadow-md text-neutral-200">
+                  {locale === 'en' 
+                    ? 'Discover our exclusive collections and access your private space.' 
+                    : 'Découvrez nos collections exclusives et accédez à votre espace privé.'}
+                </p>
               </div>
+            </div>
 
-              {error && (
-                <div className="bg-red-50 border-l-2 border-danger text-danger p-4 text-xs mb-6 font-medium rounded-lg flex items-start gap-3 shadow-2xs">
-                  <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>{error}</span>
-                </div>
-              )}
-
-              {success && (
-                <div className="bg-green-50 border-l-2 border-emerald-500 text-emerald-700 p-4 text-xs mb-6 font-medium rounded-lg flex items-start gap-3 shadow-2xs">
-                  <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>{success}</span>
-                </div>
-              )}
-
-              {/* Mode Switcher Tabs */}
-              <div className="flex border-b border-neutral-200 mb-8">
-                <button
-                  type="button"
-                  onClick={() => { setAuthMode('login'); setOtpStep(false); setError(''); setSuccess(''); }}
-                  className={`flex-1 pb-4 text-xs font-bold uppercase tracking-widest border-b-2 transition-all cursor-pointer bg-transparent border-0 ${
-                    authMode === 'login' ? 'border-primary text-primary font-extrabold' : 'border-transparent text-neutral-400 hover:text-neutral-600'
-                  }`}
-                >
-                  {locale === 'en' ? 'Sign In' : 'Connexion'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setAuthMode('register'); setOtpStep(false); setError(''); setSuccess(''); }}
-                  className={`flex-1 pb-4 text-xs font-bold uppercase tracking-widest border-b-2 transition-all cursor-pointer bg-transparent border-0 ${
-                    authMode === 'register' ? 'border-primary text-primary font-extrabold' : 'border-transparent text-neutral-400 hover:text-neutral-600'
-                  }`}
-                >
-                  {locale === 'en' ? 'Sign Up' : 'Créer un compte'}
-                </button>
+            {/* RIGHT SIDE: Centered Form */}
+            <div className="w-full md:w-1/2 flex items-center justify-center p-6 sm:p-12 lg:p-20 bg-neutral-50">
+              <div className="w-full max-w-md animate-fade-in-up">
+            {error && (
+              <div className="bg-red-50 border-l-4 border-danger text-danger p-4 text-sm mb-6 font-medium rounded-none flex items-start gap-3 shadow-sm">
+                <ShieldAlert className="w-5 h-5 shrink-0" />
+                <span>{error}</span>
               </div>
+            )}
 
-              {showForgotPassword ? (
-                /* ────── MOT DE PASSE OUBLIÉ ────── */
-                <div className="animate-fade-in">
-                  {!forgotSent ? (
-                    /* Étape 1 : Saisie de l'e-mail */
-                    <form onSubmit={handleForgotPassword} className="text-left">
-                      {/* Icône décorative */}
-                      <div className="flex justify-center mb-7">
-                        <div className="w-16 h-16 rounded-full bg-primary/8 flex items-center justify-center">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-                          </svg>
-                        </div>
-                      </div>
+            {success && (
+              <div className="bg-green-50 border-l-4 border-emerald-500 text-emerald-700 p-4 text-sm mb-6 font-medium rounded-none flex items-start gap-3 shadow-sm">
+                <CheckCircle2 className="w-5 h-5 shrink-0" />
+                <span>{success}</span>
+              </div>
+            )}
 
-                      <h2 className="text-xl font-serif text-primary text-center mb-2">
-                        {locale === 'en' ? 'Forgot your password?' : 'Mot de passe oublié ?'}
-                      </h2>
-                      <p className="text-xs text-neutral-500 text-center leading-relaxed mb-8">
-                        {locale === 'en'
-                          ? 'Enter your e-mail address and we\'ll send you a link to reset your password.'
-                          : 'Saisissez votre adresse e-mail et nous vous enverrons un lien de réinitialisation.'}
-                      </p>
-
-                      {error && (
-                        <div className="bg-red-50 border-l-2 border-danger text-danger p-4 text-xs mb-6 font-medium rounded-lg flex items-start gap-3">
-                          <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
-                          <span>{error}</span>
-                        </div>
-                      )}
-
-                      <div className="flex flex-col gap-2 mb-6">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{c.email_address}</label>
-                        <div className="relative">
-                          <input
-                            type="email"
-                            required
-                            value={forgotEmail}
-                            onChange={(e) => setForgotEmail(e.target.value)}
-                            placeholder="nom@exemple.com"
-                            className="w-full py-3.5 px-4 pl-11 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary rounded-xl transition-all placeholder-neutral-400 font-light focus:outline-none"
-                          />
-                          <svg xmlns="http://www.w3.org/2000/svg" className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-                          </svg>
-                        </div>
-                      </div>
-
-                      <button
-                        type="submit"
-                        disabled={loginLoading}
-                        className="w-full bg-primary hover:bg-neutral-850 text-white py-4 text-xs font-semibold uppercase tracking-widest transition-all rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-primary/15"
-                      >
-                        {loginLoading ? (
-                          <Loader2 className="w-4 h-4 animate-spin text-white" />
-                        ) : (
-                          locale === 'en' ? 'Send reset link' : 'Envoyer le lien'
-                        )}
-                      </button>
-
-                      <div className="text-center mt-6">
-                        <button
-                          type="button"
-                          onClick={() => { setShowForgotPassword(false); setForgotSent(false); setError(''); }}
-                          className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 hover:text-primary transition-all cursor-pointer bg-transparent border-none inline-flex items-center gap-1.5"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-                          </svg>
-                          {c.back_to_login}
-                        </button>
-                      </div>
-                    </form>
-                  ) : (
-                    /* Étape 2 : Confirmation */
-                    <div className="text-center animate-fade-in flex flex-col items-center gap-5 py-4">
-                      {/* Enveloppe animée */}
-                      <div className="relative w-20 h-20 flex items-center justify-center">
-                        <div className="absolute inset-0 rounded-full bg-emerald-100 animate-ping opacity-30" style={{animationDuration:'2s'}}></div>
-                        <div className="w-20 h-20 rounded-full bg-emerald-50 border-2 border-emerald-200 flex items-center justify-center">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="w-9 h-9 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 9v.906a2.25 2.25 0 01-1.183 1.981l-6.478 3.488M2.25 9v.906a2.25 2.25 0 001.183 1.981l6.478 3.488m8.839 2.51l-4.66-2.51m0 0l-1.023-.55a2.25 2.25 0 00-2.134 0l-1.022.55m0 0l-4.661 2.51m16.5 1.615a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V8.844a2.25 2.25 0 011.183-1.981l7.5-4.04a2.25 2.25 0 012.134 0l7.5 4.04a2.25 2.25 0 011.183 1.98V19.5z" />
-                          </svg>
-                        </div>
-                      </div>
-
-                      <h2 className="text-xl font-serif text-primary">
-                        {locale === 'en' ? 'Check your inbox' : 'Vérifiez votre boîte mail'}
-                      </h2>
-
-                      <p className="text-xs text-neutral-500 leading-relaxed max-w-xs">
-                        {locale === 'en'
-                          ? <>We've sent a reset link to <strong className="text-neutral-700 font-semibold">{forgotEmail}</strong>. Check your spam folder if you don't see it.</>  
-                          : <>Nous avons envoyé un lien de réinitialisation à <strong className="text-neutral-700 font-semibold">{forgotEmail}</strong>. Vérifiez également vos spams.</>}
-                      </p>
-
-                      {/* Séparateur */}
-                      <div className="w-full border-t border-neutral-100 my-1"></div>
-
-                      <div className="flex flex-col gap-3 w-full">
-                        <button
-                          type="button"
-                          onClick={handleForgotPassword}
-                          disabled={loginLoading}
-                          className="w-full border border-neutral-200 text-neutral-600 hover:bg-neutral-50 py-3.5 text-[10px] font-bold uppercase tracking-widest transition-all rounded-xl bg-white cursor-pointer flex items-center justify-center gap-2"
-                        >
-                          {loginLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-                          {locale === 'en' ? 'Resend link' : 'Renvoyer le lien'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { setShowForgotPassword(false); setForgotSent(false); setError(''); setSuccess(''); }}
-                          className="w-full bg-primary hover:bg-neutral-850 text-white py-3.5 text-[10px] font-bold uppercase tracking-widest transition-all rounded-xl cursor-pointer"
-                        >
-                          {c.back_to_login}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : authMode === 'login' ? (
-                /* ── LOGIN FORM ── */
-                <div className="animate-fade-in text-left">
-                  {/* Method Switcher */}
-                  <div className="flex gap-3 mb-6 bg-neutral-100/60 p-1 rounded-xl">
-                    <button
-                      type="button"
-                      onClick={() => setLoginMethod('email')}
-                      className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer border-0 ${
-                        loginMethod === 'email' ? 'bg-white text-neutral-900 shadow-2xs font-extrabold' : 'bg-transparent text-neutral-500 hover:text-neutral-700'
-                      }`}
-                    >
-                      E-mail
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setLoginMethod('phone')}
-                      className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer border-0 ${
-                        loginMethod === 'phone' ? 'bg-white text-neutral-900 shadow-2xs font-extrabold' : 'bg-transparent text-neutral-500 hover:text-neutral-700'
-                      }`}
-                    >
-                      {locale === 'en' ? 'Phone' : 'Téléphone'}
-                    </button>
-                  </div>
-
-                  <form onSubmit={handleLogin} className="space-y-5">
-                    {loginMethod === 'email' ? (
-                      /* Email Login Fields */
-                      <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{c.email_address}</label>
-                        <input
-                          type="email"
-                          required
-                          value={loginEmail}
-                          onChange={(e) => setLoginEmail(e.target.value)}
-                          placeholder="nom@exemple.com"
-                          className="w-full py-3.5 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary rounded-lg transition-all placeholder-neutral-400 font-light"
-                        />
-                      </div>
-                    ) : (
-                      /* Phone Login Fields */
-                      <div className="space-y-4">
-                        <div className="flex flex-col gap-2">
-                          <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{locale === 'en' ? 'Country' : 'Pays'}</label>
-                          <select
-                            value={registerCountry}
-                            onChange={(e) => setRegisterCountry(e.target.value)}
-                            className="w-full py-3.5 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary rounded-lg transition-all font-light"
-                          >
-                            <option value="CI">Côte d’Ivoire (+225)</option>
-                            <option value="TG">Togo (+228)</option>
-                            <option value="BJ">Bénin (+229)</option>
-                            <option value="SN">Sénégal (+221)</option>
-                          </select>
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{locale === 'en' ? 'Phone Number' : 'Numéro de Téléphone'}</label>
-                          <input
-                            type="tel"
-                            required
-                            value={loginPhone}
-                            onChange={(e) => setLoginPhone(e.target.value)}
-                            placeholder={registerCountry === 'TG' ? '90 00 00 00' : '07 00 00 00 00'}
-                            className="w-full py-3.5 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary rounded-lg transition-all placeholder-neutral-400 font-light"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex flex-col gap-2">
-                      <div className="flex justify-between items-center">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{c.password}</label>
-                        <button
-                          type="button"
-                          onClick={() => setShowForgotPassword(true)}
-                          className="text-[9px] font-bold uppercase tracking-wider text-neutral-400 hover:text-accent transition-all cursor-pointer bg-transparent border-none p-0"
-                        >
-                          {c.forgot_password_q}
-                        </button>
-                      </div>
+            {showForgotPassword ? (
+              /* ────── MOT DE PASSE OUBLIÉ ────── */
+              <div className="bg-white p-8 md:p-12 rounded-none shadow-sm border border-neutral-200 animate-fade-in">
+                {!forgotSent ? (
+                  <form onSubmit={handleForgotPassword} className="text-left">
+                    <h2 className="text-xl font-bold text-neutral-900 mb-4 uppercase tracking-wider">
+                      {locale === 'en' ? 'Forgot password?' : 'Mot de passe oublié ?'}
+                    </h2>
+                    <p className="text-xs text-neutral-500 leading-relaxed mb-6">
+                      {locale === 'en'
+                        ? 'Enter your e-mail address and we\'ll send you a link to reset your password.'
+                        : 'Saisissez votre adresse e-mail et nous vous enverrons un lien de réinitialisation.'}
+                    </p>
+                    <div className="flex flex-col gap-2 mb-6">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{c.email_address}</label>
                       <input
-                        type="password"
+                        type="email"
                         required
-                        value={loginPassword}
-                        onChange={(e) => setLoginPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full py-3.5 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary rounded-lg transition-all placeholder-neutral-400 font-light"
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        placeholder="nom@exemple.com"
+                        className="w-full py-3.5 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-neutral-900 rounded-none transition-all placeholder-neutral-400 font-light focus:outline-none"
                       />
                     </div>
-
                     <button
                       type="submit"
                       disabled={loginLoading}
-                      className="w-full bg-primary hover:bg-neutral-850 text-white py-4 text-xs font-semibold uppercase tracking-widest transition-all rounded-lg flex items-center justify-center gap-2 mt-8 cursor-pointer shadow-md shadow-primary/10"
+                      className="w-full bg-primary hover:bg-neutral-850 text-white py-4 text-xs font-bold uppercase tracking-widest transition-all rounded-none flex items-center justify-center gap-2 cursor-pointer"
                     >
-                      {loginLoading ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : c.login_btn}
+                      {loginLoading ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : (locale === 'en' ? 'Send reset link' : 'Envoyer le lien')}
                     </button>
+                    <div className="text-center mt-6">
+                      <button
+                        type="button"
+                        onClick={() => { setShowForgotPassword(false); setForgotSent(false); setError(''); }}
+                        className="text-[10px] font-bold uppercase tracking-wider text-neutral-500 hover:text-neutral-900 transition-all cursor-pointer bg-transparent border-none inline-flex items-center gap-1.5"
+                      >
+                        {c.back_to_login}
+                      </button>
+                    </div>
                   </form>
-                </div>
-              ) : otpStep ? (
-                /* ── OTP VERIFICATION SCREEN ── */
-                <form onSubmit={handleVerifyOtp} className="space-y-5 animate-fade-in text-left">
-                  <div className="p-4 bg-accent/5 border border-accent/20 rounded-lg text-xs text-accent leading-relaxed font-light">
-                    {locale === 'en' 
-                      ? `We sent a validation OTP code to the number ${otpPhone}. Please enter it below along with your account password.` 
-                      : `Un code OTP a été envoyé au numéro ${otpPhone}. Veuillez le renseigner ci-dessous avec le mot de passe pour finaliser.`}
+                ) : (
+                  <div className="text-center animate-fade-in flex flex-col items-center py-4">
+                    <h2 className="text-xl font-bold text-neutral-900 mb-4 uppercase tracking-wider">
+                      {locale === 'en' ? 'Check your inbox' : 'Vérifiez votre boîte mail'}
+                    </h2>
+                    <p className="text-xs text-neutral-500 leading-relaxed mb-6">
+                      {locale === 'en'
+                        ? <>We\'ve sent a reset link to <strong className="text-neutral-700 font-semibold">{forgotEmail}</strong>.</>  
+                        : <>Nous avons envoyé un lien de réinitialisation à <strong className="text-neutral-700 font-semibold">{forgotEmail}</strong>.</>}
+                    </p>
+                    <div className="flex flex-col gap-3 w-full mt-4">
+                      <button
+                        type="button"
+                        onClick={handleForgotPassword}
+                        disabled={loginLoading}
+                        className="w-full border border-neutral-200 text-neutral-600 hover:bg-neutral-50 py-3.5 text-[10px] font-bold uppercase tracking-widest transition-all rounded-none bg-white cursor-pointer flex items-center justify-center gap-2"
+                      >
+                        {loginLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                        {locale === 'en' ? 'Resend link' : 'Renvoyer le lien'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setShowForgotPassword(false); setForgotSent(false); setError(''); setSuccess(''); }}
+                        className="w-full bg-primary hover:bg-neutral-850 text-white py-3.5 text-[10px] font-bold uppercase tracking-widest transition-all rounded-none cursor-pointer"
+                      >
+                        {c.back_to_login}
+                      </button>
+                    </div>
                   </div>
-
+                )}
+              </div>
+            ) : otpStep ? (
+              /* ── OTP VERIFICATION SCREEN ── */
+              <div className="bg-white p-8 md:p-12 rounded-none shadow-sm border border-neutral-200 animate-fade-in">
+                <form onSubmit={handleVerifyOtp} className="space-y-5 text-left">
+                  <h2 className="text-xl font-bold text-neutral-900 mb-4 uppercase tracking-wider">
+                    {locale === 'en' ? 'Verification' : 'Vérification OTP'}
+                  </h2>
+                  <div className="p-4 bg-neutral-50 border border-neutral-200 rounded-none text-xs text-neutral-600 leading-relaxed font-light">
+                    {locale === 'en' 
+                      ? `We sent a validation OTP code to the number ${otpPhone}.` 
+                      : `Un code OTP a été envoyé au numéro ${otpPhone}.`}
+                  </div>
                   <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{locale === 'en' ? 'OTP Verification Code' : 'Code de Validation OTP'}</label>
+                    <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{locale === 'en' ? 'OTP Code' : 'Code OTP'}</label>
                     <input
                       type="text"
                       required
                       value={otpCode}
                       onChange={(e) => setOtpCode(e.target.value)}
                       placeholder="123456"
-                      className="w-full py-3.5 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary rounded-lg transition-all text-center tracking-[0.5em] font-bold"
+                      className="w-full py-3.5 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-neutral-900 rounded-none transition-all text-center tracking-[0.5em] font-bold outline-none"
                     />
                   </div>
-
                   <div className="flex flex-col gap-2">
                     <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{c.password}</label>
                     <input
@@ -1257,234 +1106,333 @@ const Account = () => {
                       value={registerPassword}
                       onChange={(e) => setRegisterPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full py-3.5 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary rounded-lg transition-all placeholder-neutral-400 font-light"
+                      className="w-full py-3.5 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-neutral-900 rounded-none transition-all outline-none"
                     />
                   </div>
-
                   <button
                     type="submit"
                     disabled={loginLoading}
-                    className="w-full bg-primary hover:bg-neutral-850 text-white py-4 text-xs font-semibold uppercase tracking-widest transition-all rounded-lg flex items-center justify-center gap-2 mt-8 cursor-pointer shadow-md shadow-primary/10"
+                    className="w-full bg-primary hover:bg-neutral-850 text-white py-4 text-xs font-bold uppercase tracking-widest transition-all rounded-none flex items-center justify-center gap-2 mt-4 cursor-pointer"
                   >
                     {loginLoading ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : (locale === 'en' ? 'Verify and Create Account' : 'Vérifier et créer le compte')}
                   </button>
                 </form>
-              ) : (
-                /* ── REGISTRATION FORM ── */
-                <div className="animate-fade-in text-left">
-                  {/* Method Switcher */}
-                  <div className="flex gap-3 mb-6 bg-neutral-100/60 p-1 rounded-xl">
-                    <button
-                      type="button"
-                      onClick={() => setRegisterMethod('email')}
-                      className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer border-0 ${
-                        registerMethod === 'email' ? 'bg-white text-neutral-900 shadow-2xs font-extrabold' : 'bg-transparent text-neutral-500 hover:text-neutral-700'
-                      }`}
-                    >
-                      E-mail
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRegisterMethod('phone')}
-                      className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer border-0 ${
-                        registerMethod === 'phone' ? 'bg-white text-neutral-900 shadow-2xs font-extrabold' : 'bg-transparent text-neutral-500 hover:text-neutral-700'
-                      }`}
-                    >
-                      {locale === 'en' ? 'Phone' : 'Téléphone'}
-                    </button>
-                  </div>
+              </div>
+            ) : (
+              /* ── MAIN FORM CONTAINER ── */
+              <div className="bg-white p-6 md:p-10 border border-neutral-200 rounded-none shadow-sm flex flex-col">
+                
+                {/* TABS SWITCHER */}
+                <div className="flex gap-2 mb-8 border-b border-neutral-200 pb-4">
+                  <button
+                    type="button"
+                    onClick={() => setAuthMode('login')}
+                    className={`flex-1 pb-3 text-sm font-bold uppercase tracking-wider transition-all cursor-pointer relative ${
+                      authMode === 'login' ? 'text-neutral-900' : 'text-neutral-400 hover:text-neutral-600'
+                    }`}
+                  >
+                    {locale === 'en' ? 'Sign In' : 'Connexion'}
+                    {authMode === 'login' && (
+                      <span className="absolute bottom-[-17px] left-0 right-0 h-0.5 bg-neutral-900"></span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAuthMode('register')}
+                    className={`flex-1 pb-3 text-sm font-bold uppercase tracking-wider transition-all cursor-pointer relative ${
+                      authMode === 'register' ? 'text-neutral-900' : 'text-neutral-400 hover:text-neutral-600'
+                    }`}
+                  >
+                    {locale === 'en' ? 'Register' : 'Créer un compte'}
+                    {authMode === 'register' && (
+                      <span className="absolute bottom-[-17px] left-0 right-0 h-0.5 bg-neutral-900"></span>
+                    )}
+                  </button>
+                </div>
 
-                  <form onSubmit={handleRegister} className="space-y-4">
-                    <div className="flex flex-col gap-2">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{locale === 'en' ? 'Full Name' : 'Nom Complet'}</label>
-                      <input
-                        type="text"
-                        required
-                        value={registerName}
-                        onChange={(e) => setRegisterName(e.target.value)}
-                        placeholder="John Doe"
-                        className="w-full py-3.5 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary rounded-lg transition-all placeholder-neutral-400 font-light"
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{locale === 'en' ? 'Country' : 'Pays'}</label>
-                      <select
-                        value={registerCountry}
-                        onChange={(e) => setRegisterCountry(e.target.value)}
-                        className="w-full py-3.5 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary rounded-lg transition-all font-light"
+                {authMode === 'login' ? (
+                  /* --- LOGIN TAB --- */
+                  <div className="animate-fade-in">
+                    {/* Method Switcher Login */}
+                    <div className="flex gap-2 mb-6">
+                      <button
+                        type="button"
+                        onClick={() => setLoginMethod('email')}
+                        className={`flex-1 py-2.5 text-[10px] font-bold uppercase tracking-wider rounded-none transition-all cursor-pointer border ${
+                          loginMethod === 'email' ? 'border-neutral-900 bg-neutral-900 text-white' : 'border-neutral-200 bg-transparent text-neutral-600 hover:bg-neutral-50'
+                        }`}
                       >
-                        <option value="CI">Côte d’Ivoire (+225)</option>
-                        <option value="TG">Togo (+228)</option>
-                        <option value="BJ">Bénin (+229)</option>
-                        <option value="SN">Sénégal (+221)</option>
-                      </select>
+                        E-mail
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLoginMethod('phone')}
+                        className={`flex-1 py-2.5 text-[10px] font-bold uppercase tracking-wider rounded-none transition-all cursor-pointer border ${
+                          loginMethod === 'phone' ? 'border-neutral-900 bg-neutral-900 text-white' : 'border-neutral-200 bg-transparent text-neutral-600 hover:bg-neutral-50'
+                        }`}
+                      >
+                        {locale === 'en' ? 'Phone' : 'Téléphone'}
+                      </button>
                     </div>
-
-                    {registerMethod === 'email' ? (
-                      /* Email Registration Fields */
-                      <>
-                        <div className="flex flex-col gap-2">
+                    
+                    <form onSubmit={handleLogin} className="space-y-4">
+                      {loginMethod === 'email' ? (
+                        <div className="flex flex-col gap-1.5">
                           <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{c.email_address}</label>
                           <input
                             type="email"
                             required
-                            value={registerEmail}
-                            onChange={(e) => setRegisterEmail(e.target.value)}
+                            value={loginEmail}
+                            onChange={(e) => setLoginEmail(e.target.value)}
                             placeholder="nom@exemple.com"
-                            className="w-full py-3.5 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary rounded-lg transition-all placeholder-neutral-400 font-light"
+                            className="w-full py-3 px-4 text-xs bg-white border border-neutral-300 focus:border-neutral-900 rounded-none transition-all font-light outline-none"
                           />
                         </div>
-                        <div className="flex flex-col gap-2">
+                      ) : (
+                        <div className="space-y-4">
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{locale === 'en' ? 'Country' : 'Pays'}</label>
+                            <select
+                              value={registerCountry}
+                              onChange={(e) => setRegisterCountry(e.target.value)}
+                              className="w-full py-3 px-4 text-xs bg-white border border-neutral-300 focus:border-neutral-900 rounded-none transition-all font-light outline-none"
+                            >
+                              <option value="CI">Côte d’Ivoire (+225)</option>
+                              <option value="TG">Togo (+228)</option>
+                              <option value="BJ">Bénin (+229)</option>
+                              <option value="SN">Sénégal (+221)</option>
+                            </select>
+                          </div>
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{locale === 'en' ? 'Phone Number' : 'Numéro de Téléphone'}</label>
+                            <input
+                              type="tel"
+                              required
+                              value={loginPhone}
+                              onChange={(e) => setLoginPhone(e.target.value)}
+                              placeholder={registerCountry === 'TG' ? '90 00 00 00' : '07 00 00 00 00'}
+                              className="w-full py-3 px-4 text-xs bg-white border border-neutral-300 focus:border-neutral-900 rounded-none transition-all font-light outline-none"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex justify-between items-center">
                           <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{c.password}</label>
-                          <input
-                            type="password"
-                            required
-                            value={registerPassword}
-                            onChange={(e) => setRegisterPassword(e.target.value)}
-                            placeholder="••••••••"
-                            className="w-full py-3.5 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary rounded-lg transition-all placeholder-neutral-400 font-light"
-                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowForgotPassword(true)}
+                            className="text-[9px] font-bold uppercase tracking-wider text-neutral-500 hover:text-neutral-900 transition-all cursor-pointer bg-transparent border-none p-0 underline underline-offset-2"
+                          >
+                            {c.forgot_password_q}
+                          </button>
                         </div>
-                      </>
-                    ) : (
-                      /* Phone Registration Fields */
-                      <div className="flex flex-col gap-2">
-                        <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{locale === 'en' ? 'Phone Number' : 'Numéro de Téléphone'}</label>
                         <input
-                          type="tel"
+                          type="password"
                           required
-                          value={registerPhone}
-                          onChange={(e) => setRegisterPhone(e.target.value)}
-                          placeholder={registerCountry === 'TG' ? '90 00 00 00' : '07 00 00 00 00'}
-                          className="w-full py-3.5 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary rounded-lg transition-all placeholder-neutral-400 font-light"
+                          value={loginPassword}
+                          onChange={(e) => setLoginPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="w-full py-3 px-4 text-xs bg-white border border-neutral-300 focus:border-neutral-900 rounded-none transition-all font-light outline-none"
                         />
                       </div>
-                    )}
 
-                    <button
-                      type="submit"
-                      disabled={loginLoading}
-                      className="w-full bg-primary hover:bg-neutral-850 text-white py-4 text-xs font-semibold uppercase tracking-widest transition-all rounded-lg flex items-center justify-center gap-2 mt-8 cursor-pointer shadow-md shadow-primary/10"
-                    >
-                      {loginLoading ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : (registerMethod === 'phone' ? (locale === 'en' ? 'Send OTP SMS' : 'Recevoir le code OTP') : (locale === 'en' ? 'Create Account' : 'Créer un compte'))}
-                    </button>
-                  </form>
-                </div>
-              )}
+                      <button
+                        type="submit"
+                        disabled={loginLoading}
+                        className="w-full bg-primary hover:bg-neutral-850 text-white py-3.5 text-xs font-bold uppercase tracking-widest transition-all rounded-none flex items-center justify-center gap-2 mt-6 cursor-pointer"
+                      >
+                        {loginLoading ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : (locale === 'en' ? 'Sign In' : 'Se connecter')}
+                      </button>
+                    </form>
 
-              {/* Social Logins Section */}
-              {!otpStep && !showForgotPassword && (
-                <div className="space-y-4">
-                  <div className="relative flex py-5 items-center">
-                    <div className="flex-grow border-t border-neutral-200"></div>
-                    <span className="flex-shrink mx-4 text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
-                      {locale === 'en' ? 'Or continue with' : 'Ou continuer avec'}
-                    </span>
-                    <div className="flex-grow border-t border-neutral-200"></div>
-                  </div>
+                    {/* Social Logins Section */}
+                    <div className="mt-8 space-y-4">
+                      <div className="relative flex items-center">
+                        <div className="flex-grow border-t border-neutral-200"></div>
+                        <span className="flex-shrink mx-4 text-[9px] font-bold text-neutral-400 uppercase tracking-widest">
+                          {locale === 'en' ? 'OR' : 'OU'}
+                        </span>
+                        <div className="flex-grow border-t border-neutral-200"></div>
+                      </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <button
-                      type="button"
-                      onClick={handleSocialGoogle}
-                      className="flex items-center justify-center gap-3 py-3 border border-neutral-200 hover:bg-neutral-50 text-xs font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer bg-white"
-                    >
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05" />
-                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335" />
-                      </svg>
-                      Google
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleSocialFacebook}
-                      className="flex items-center justify-center gap-3 py-3 border border-neutral-200 hover:bg-neutral-50 text-xs font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer bg-white"
-                    >
-                      <svg className="w-4 h-4 text-[#1877F2]" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                      </svg>
-                      Facebook
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Right Column: Benefits / Image */}
-            <div className="hidden md:flex w-full md:w-1/2 bg-neutral-50 relative border-l border-neutral-200">
-              <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?q=80&w=2070')] bg-cover bg-center opacity-10"></div>
-              <div className="relative z-10 p-12 lg:p-16 flex flex-col justify-center h-full w-full bg-gradient-to-br from-neutral-50/90 to-neutral-100/90">
-                <h3 className="text-lg font-serif text-primary mb-8 border-b border-neutral-200 pb-4">{c.member_privileges}</h3>
-                
-                <div className="space-y-8 text-left">
-                  <div className="flex gap-4 items-start">
-                    <div className="w-10 h-10 rounded-full bg-white border border-neutral-200 flex items-center justify-center shrink-0 shadow-sm">
-                      <ShoppingBag className="w-4 h-4 text-accent" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-800">{c.custom_tracking}</h4>
-                      <p className="text-[11px] text-neutral-500 font-light mt-1.5 leading-relaxed">{c.custom_tracking_desc}</p>
+                      <div className="flex flex-col gap-3">
+                        <button
+                          type="button"
+                          onClick={handleSocialGoogle}
+                          className="flex items-center justify-center gap-3 py-3 border border-neutral-200 hover:bg-neutral-50 text-[10px] font-bold uppercase tracking-wider rounded-none transition-all cursor-pointer bg-white"
+                        >
+                          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05" />
+                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" fill="#EA4335" />
+                          </svg>
+                          {locale === 'en' ? 'Continue with Google' : 'Continuer avec Google'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSocialFacebook}
+                          className="flex items-center justify-center gap-3 py-3 border border-neutral-200 hover:bg-[#1877F2]/5 hover:border-[#1877F2] text-[10px] font-bold uppercase tracking-wider rounded-none transition-all cursor-pointer bg-white"
+                        >
+                          <svg className="w-4 h-4 text-[#1877F2]" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                          </svg>
+                          {locale === 'en' ? 'Continue with Facebook' : 'Continuer avec Facebook'}
+                        </button>
+                      </div>
                     </div>
                   </div>
+                ) : (
+                  /* --- REGISTER TAB --- */
+                  <div className="animate-fade-in">
+                    {/* Method Switcher Register */}
+                    <div className="flex gap-2 mb-6">
+                      <button
+                        type="button"
+                        onClick={() => setRegisterMethod('email')}
+                        className={`flex-1 py-2.5 text-[10px] font-bold uppercase tracking-wider rounded-none transition-all cursor-pointer border ${
+                          registerMethod === 'email' ? 'border-neutral-900 bg-neutral-900 text-white' : 'border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50'
+                        }`}
+                      >
+                        E-mail
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRegisterMethod('phone')}
+                        className={`flex-1 py-2.5 text-[10px] font-bold uppercase tracking-wider rounded-none transition-all cursor-pointer border ${
+                          registerMethod === 'phone' ? 'border-neutral-900 bg-neutral-900 text-white' : 'border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50'
+                        }`}
+                      >
+                        {locale === 'en' ? 'Phone' : 'Téléphone'}
+                      </button>
+                    </div>
 
-                  <div className="flex gap-4 items-start">
-                    <div className="w-10 h-10 rounded-full bg-white border border-neutral-200 flex items-center justify-center shrink-0 shadow-sm">
-                      <Heart className="w-4 h-4 text-accent" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-800">{c.wishlist}</h4>
-                      <p className="text-[11px] text-neutral-500 font-light mt-1.5 leading-relaxed">{c.wishlist_desc}</p>
-                    </div>
-                  </div>
+                    <form onSubmit={handleRegister} className="space-y-4">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{locale === 'en' ? 'Full Name' : 'Nom Complet'}</label>
+                        <input
+                          type="text"
+                          required
+                          value={registerName}
+                          onChange={(e) => setRegisterName(e.target.value)}
+                          placeholder="John Doe"
+                          className="w-full py-3 px-4 text-xs bg-white border border-neutral-300 focus:border-neutral-900 rounded-none transition-all font-light outline-none"
+                        />
+                      </div>
 
-                  <div className="flex gap-4 items-start">
-                    <div className="w-10 h-10 rounded-full bg-white border border-neutral-200 flex items-center justify-center shrink-0 shadow-sm">
-                      <ShieldCheck className="w-4 h-4 text-accent" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-neutral-800">{c.easy_payment}</h4>
-                      <p className="text-[11px] text-neutral-500 font-light mt-1.5 leading-relaxed">{c.easy_payment_desc}</p>
-                    </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{locale === 'en' ? 'Country' : 'Pays'}</label>
+                        <select
+                          value={registerCountry}
+                          onChange={(e) => setRegisterCountry(e.target.value)}
+                          className="w-full py-3 px-4 text-xs bg-white border border-neutral-300 focus:border-neutral-900 rounded-none transition-all font-light outline-none"
+                        >
+                          <option value="CI">Côte d’Ivoire (+225)</option>
+                          <option value="TG">Togo (+228)</option>
+                          <option value="BJ">Bénin (+229)</option>
+                          <option value="SN">Sénégal (+221)</option>
+                        </select>
+                      </div>
+
+                      {registerMethod === 'email' ? (
+                        <>
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{c.email_address}</label>
+                            <input
+                              type="email"
+                              required
+                              value={registerEmail}
+                              onChange={(e) => setRegisterEmail(e.target.value)}
+                              placeholder="nom@exemple.com"
+                              className="w-full py-3 px-4 text-xs bg-white border border-neutral-300 focus:border-neutral-900 rounded-none transition-all font-light outline-none"
+                            />
+                          </div>
+                          <div className="flex flex-col gap-1.5">
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{c.password}</label>
+                            <input
+                              type="password"
+                              required
+                              value={registerPassword}
+                              onChange={(e) => setRegisterPassword(e.target.value)}
+                              placeholder="••••••••"
+                              className="w-full py-3 px-4 text-xs bg-white border border-neutral-300 focus:border-neutral-900 rounded-none transition-all font-light outline-none"
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex flex-col gap-1.5">
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{locale === 'en' ? 'Phone Number' : 'Numéro de Téléphone'}</label>
+                          <input
+                            type="tel"
+                            required
+                            value={registerPhone}
+                            onChange={(e) => setRegisterPhone(e.target.value)}
+                            placeholder={registerCountry === 'TG' ? '90 00 00 00' : '07 00 00 00 00'}
+                            className="w-full py-3 px-4 text-xs bg-white border border-neutral-300 focus:border-neutral-900 rounded-none transition-all font-light outline-none"
+                          />
+                        </div>
+                      )}
+
+                      <div className="pt-2">
+                        <label className="flex items-start gap-2 cursor-pointer">
+                          <input type="checkbox" className="mt-1 accent-primary w-3 h-3" required />
+                          <span className="text-[10px] text-neutral-500 leading-tight">
+                            J'accepte les <a href="/privacy-policy" className="underline hover:text-neutral-800">Conditions d'Utilisation</a> et la <a href="/privacy-policy" className="underline hover:text-neutral-800">Politique de Confidentialité</a>.
+                          </span>
+                        </label>
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={loginLoading}
+                        className="w-full bg-primary hover:bg-neutral-850 text-white py-3.5 text-xs font-bold uppercase tracking-widest transition-all rounded-none flex items-center justify-center gap-2 mt-4 cursor-pointer"
+                      >
+                        {loginLoading ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : (registerMethod === 'phone' ? (locale === 'en' ? 'Send OTP SMS' : 'Recevoir le code OTP') : (locale === 'en' ? 'Create Account' : 'Créer un compte'))}
+                      </button>
+                    </form>
                   </div>
-                </div>
+                )}
+
+              </div>
+            )}
               </div>
             </div>
           </div>
         ) : (
           /* ── AUTHENTICATED: Premium Luxury Dashboard ── */
-          <div className="space-y-8">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="space-y-8">
             
             {/* Header Profil */}
-            <div className="bg-white border border-neutral-200 p-4 md:p-8 flex flex-col lg:flex-row lg:items-center justify-between gap-6 shadow-sm rounded-xl">
-              <div className="space-y-2">
+            <div className="bg-white border border-neutral-200 p-8 md:p-12 flex flex-col lg:flex-row lg:items-center justify-between gap-6 shadow-sm rounded-none">
+              <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <span className="text-[9px] uppercase tracking-[0.25em] text-accent font-semibold px-2.5 py-1 border border-accent/20 bg-accent/5 rounded-full">{c.privileged_member_tag}</span>
+                  <span className="text-[9px] uppercase tracking-[0.25em] text-accent font-bold px-3 py-1.5 border border-accent/20 bg-accent/5 rounded-none">{c.privileged_member_tag}</span>
                 </div>
-                <h1 className="text-2xl font-serif text-primary font-normal tracking-wide">{getGreeting(c)}, {customerUser?.name?.split(' ')[0] || 'Client'}</h1>
-                <p className="text-xs text-neutral-500 font-light flex items-center gap-4">
+                <h1 className="text-3xl font-extrabold uppercase tracking-[0.2em] text-neutral-900">{getGreeting(c)}, {customerUser?.name?.split(' ')[0] || 'Client'}</h1>
+                <p className="text-xs text-neutral-500 font-light tracking-wider flex items-center gap-4">
                   <span>{customerUser?.email}</span>
                   {customerUser?.phone && (
                     <>
-                      <span className="w-1 h-1 rounded-full bg-neutral-300"></span>
+                      <span className="w-1 h-1 rounded-none bg-neutral-300"></span>
                       <span>{customerUser?.phone}</span>
                     </>
                   )}
                 </p>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row items-center gap-4">
                 <button
                   onClick={() => navigate('/services-de-conciergerie')}
-                  className="border border-accent/40 text-accent hover:bg-accent/5 py-2.5 px-5 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all cursor-pointer bg-white shadow-2xs"
+                  className="w-full sm:w-auto border border-accent text-accent hover:bg-accent hover:text-white py-3.5 px-6 text-[10px] font-bold uppercase tracking-[0.2em] rounded-none transition-all cursor-pointer bg-white"
                 >
                   {c.contact_concierge}
                 </button>
                 <button
                   onClick={handleLogoutClick}
-                  className="border border-neutral-200 hover:border-danger hover:text-danger text-neutral-500 py-2.5 px-5 text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all flex items-center gap-2 cursor-pointer bg-white shadow-2xs"
+                  className="w-full sm:w-auto border border-neutral-900 hover:bg-neutral-900 hover:text-white text-neutral-900 py-3.5 px-6 text-[10px] font-bold uppercase tracking-[0.2em] rounded-none transition-all flex items-center justify-center gap-2 cursor-pointer bg-transparent"
                 >
                   <LogOut className="w-3.5 h-3.5" />
                   {c.logout_btn}
@@ -1493,8 +1441,8 @@ const Account = () => {
             </div>
 
             {success && (
-              <div className="bg-emerald-50 border-l-2 border-emerald-500 text-emerald-800 p-4 text-xs font-medium rounded-lg animate-fade-in flex items-center gap-2.5 shadow-2xs">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              <div className="bg-emerald-50 border-l-2 border-emerald-500 text-emerald-800 p-4 text-xs font-medium rounded-none animate-fade-in flex items-center gap-2.5 shadow-2xs">
+                <span className="w-1.5 h-1.5 rounded-none bg-emerald-500"></span>
                 <span>{success}</span>
               </div>
             )}
@@ -1503,43 +1451,44 @@ const Account = () => {
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
               
               {/* Sidebar tabs navigation */}
-              <div className="flex flex-row overflow-x-auto lg:flex-col border border-neutral-200 bg-white p-2 md:p-3 rounded-xl h-fit gap-1 lg:gap-0 lg:space-y-1 shadow-3xs scrollbar-none snap-x snap-mandatory shrink-0 w-full">
+              <div className="flex flex-row overflow-x-auto lg:flex-col border border-neutral-200 bg-white p-6 lg:p-8 rounded-none h-fit gap-4 lg:gap-2 shadow-sm scrollbar-none snap-x snap-mandatory shrink-0 w-full lg:min-w-[280px]">
+                <h3 className="hidden lg:block text-[10px] font-bold text-neutral-400 uppercase tracking-[0.2em] mb-4 pb-4 border-b border-neutral-100">{c.personal_space || "Espace Personnel"}</h3>
                 <button
                   onClick={() => setActiveTab('dashboard')}
-                  className={`w-auto lg:w-full flex items-center gap-2 lg:gap-3 py-2.5 lg:py-3 px-3 lg:px-4 text-[10px] lg:text-xs font-bold uppercase tracking-wider transition-all text-left rounded-lg shrink-0 snap-start whitespace-nowrap ${
+                  className={`w-auto lg:w-full flex items-center gap-3 py-3 lg:py-4 px-4 text-[10px] font-bold uppercase tracking-[0.15em] transition-all text-left rounded-none shrink-0 snap-start whitespace-nowrap border-b-2 lg:border-b-0 lg:border-l-2 ${
                     activeTab === 'dashboard' 
-                      ? 'bg-primary text-white font-extrabold shadow-sm' 
-                      : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
+                      ? 'border-primary text-neutral-900 lg:bg-transparent lg:border-l-primary font-black' 
+                      : 'border-transparent text-neutral-400 hover:text-neutral-900 hover:bg-neutral-50 lg:border-l-transparent'
                   }`}
                 >
-                  <Compass className={`w-4 h-4 transition-colors ${activeTab === 'dashboard' ? 'text-white' : 'text-neutral-400'}`} />
+                  <Compass className={`w-4 h-4 transition-colors ${activeTab === 'dashboard' ? 'text-primary' : 'text-neutral-400'}`} />
                   {c.sidebar_overview}
                 </button>
 
                 <button
                   onClick={() => setActiveTab('profile')}
-                  className={`w-auto lg:w-full flex items-center gap-2 lg:gap-3 py-2.5 lg:py-3 px-3 lg:px-4 text-[10px] lg:text-xs font-bold uppercase tracking-wider transition-all text-left rounded-lg shrink-0 snap-start whitespace-nowrap ${
+                  className={`w-auto lg:w-full flex items-center gap-3 py-3 lg:py-4 px-4 text-[10px] font-bold uppercase tracking-[0.15em] transition-all text-left rounded-none shrink-0 snap-start whitespace-nowrap border-b-2 lg:border-b-0 lg:border-l-2 ${
                     activeTab === 'profile' 
-                      ? 'bg-primary text-white font-extrabold shadow-sm' 
-                      : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
+                      ? 'border-primary text-neutral-900 lg:bg-transparent lg:border-l-primary font-black' 
+                      : 'border-transparent text-neutral-400 hover:text-neutral-900 hover:bg-neutral-50 lg:border-l-transparent'
                   }`}
                 >
-                  <User className={`w-4 h-4 transition-colors ${activeTab === 'profile' ? 'text-white' : 'text-neutral-400'}`} />
+                  <User className={`w-4 h-4 transition-colors ${activeTab === 'profile' ? 'text-primary' : 'text-neutral-400'}`} />
                   {c.sidebar_profile}
                 </button>
 
                 <button
                   onClick={() => setActiveTab('orders')}
-                  className={`w-auto lg:w-full flex items-center gap-2 lg:gap-3 py-2.5 lg:py-3 px-3 lg:px-4 text-[10px] lg:text-xs font-bold uppercase tracking-wider transition-all text-left rounded-lg shrink-0 snap-start whitespace-nowrap ${
+                  className={`w-auto lg:w-full flex items-center gap-3 py-3 lg:py-4 px-4 text-[10px] font-bold uppercase tracking-[0.15em] transition-all text-left rounded-none shrink-0 snap-start whitespace-nowrap border-b-2 lg:border-b-0 lg:border-l-2 ${
                     activeTab === 'orders' 
-                      ? 'bg-primary text-white font-extrabold shadow-sm' 
-                      : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
+                      ? 'border-primary text-neutral-900 lg:bg-transparent lg:border-l-primary font-black' 
+                      : 'border-transparent text-neutral-400 hover:text-neutral-900 hover:bg-neutral-50 lg:border-l-transparent'
                   }`}
                 >
-                  <ShoppingBag className={`w-4 h-4 transition-colors ${activeTab === 'orders' ? 'text-white' : 'text-neutral-400'}`} />
+                  <ShoppingBag className={`w-4 h-4 transition-colors ${activeTab === 'orders' ? 'text-primary' : 'text-neutral-400'}`} />
                   {c.sidebar_orders}
                   {orders.length > 0 && (
-                    <span className={`ml-1.5 lg:ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full border transition-colors ${
+                    <span className={`ml-1.5 lg:ml-auto text-[9px] font-bold px-2 py-0.5 rounded-none border transition-colors ${
                       activeTab === 'orders'
                         ? 'bg-white/20 border-white/30 text-white'
                         : 'bg-neutral-100 border-neutral-200 text-neutral-600'
@@ -1551,28 +1500,28 @@ const Account = () => {
 
                 <button
                   onClick={() => setActiveTab('addresses')}
-                  className={`w-auto lg:w-full flex items-center gap-2 lg:gap-3 py-2.5 lg:py-3 px-3 lg:px-4 text-[10px] lg:text-xs font-bold uppercase tracking-wider transition-all text-left rounded-lg shrink-0 snap-start whitespace-nowrap ${
+                  className={`w-auto lg:w-full flex items-center gap-3 py-3 lg:py-4 px-4 text-[10px] font-bold uppercase tracking-[0.15em] transition-all text-left rounded-none shrink-0 snap-start whitespace-nowrap border-b-2 lg:border-b-0 lg:border-l-2 ${
                     activeTab === 'addresses' 
-                      ? 'bg-primary text-white font-extrabold shadow-sm' 
-                      : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
+                      ? 'border-primary text-neutral-900 lg:bg-transparent lg:border-l-primary font-black' 
+                      : 'border-transparent text-neutral-400 hover:text-neutral-900 hover:bg-neutral-50 lg:border-l-transparent'
                   }`}
                 >
-                  <MapPin className={`w-4 h-4 transition-colors ${activeTab === 'addresses' ? 'text-white' : 'text-neutral-400'}`} />
+                  <MapPin className={`w-4 h-4 transition-colors ${activeTab === 'addresses' ? 'text-primary' : 'text-neutral-400'}`} />
                   {c.sidebar_addresses}
                 </button>
 
                 <button
                   onClick={() => setActiveTab('favorites')}
-                  className={`w-auto lg:w-full flex items-center gap-2 lg:gap-3 py-2.5 lg:py-3 px-3 lg:px-4 text-[10px] lg:text-xs font-bold uppercase tracking-wider transition-all text-left rounded-lg shrink-0 snap-start whitespace-nowrap ${
+                  className={`w-auto lg:w-full flex items-center gap-3 py-3 lg:py-4 px-4 text-[10px] font-bold uppercase tracking-[0.15em] transition-all text-left rounded-none shrink-0 snap-start whitespace-nowrap border-b-2 lg:border-b-0 lg:border-l-2 ${
                     activeTab === 'favorites' 
-                      ? 'bg-primary text-white font-extrabold shadow-sm' 
-                      : 'text-neutral-600 hover:text-neutral-900 hover:bg-neutral-50'
+                      ? 'border-primary text-neutral-900 lg:bg-transparent lg:border-l-primary font-black' 
+                      : 'border-transparent text-neutral-400 hover:text-neutral-900 hover:bg-neutral-50 lg:border-l-transparent'
                   }`}
                 >
-                  <Heart className={`w-4 h-4 transition-colors ${activeTab === 'favorites' ? 'text-white' : 'text-neutral-400'}`} />
+                  <Heart className={`w-4 h-4 transition-colors ${activeTab === 'favorites' ? 'text-primary' : 'text-neutral-400'}`} />
                   {c.sidebar_favorites}
                   {favorites.length > 0 && (
-                    <span className={`ml-1.5 lg:ml-auto text-[9px] font-bold px-2 py-0.5 rounded-full transition-colors ${
+                    <span className={`ml-1.5 lg:ml-auto text-[9px] font-bold px-2 py-0.5 rounded-none transition-colors ${
                       activeTab === 'favorites'
                         ? 'bg-white text-primary border-transparent'
                         : 'bg-neutral-100 border-neutral-200 text-neutral-600'
@@ -1584,14 +1533,14 @@ const Account = () => {
               </div>
 
               {/* Main Content Card */}
-              <div className="lg:col-span-3 bg-white border border-neutral-200 p-4 md:p-8 rounded-xl shadow-3xs min-h-[520px]">
+              <div className="lg:col-span-3 bg-white border border-neutral-200 p-4 md:p-8 rounded-none shadow-3xs min-h-[520px]">
                 
                 {/* 0. TAB: OVERVIEW DASHBOARD */}
                 {activeTab === 'dashboard' && (
                   <div className="space-y-8 animate-fade-in">
                     <div>
-                      <h2 className="text-xl font-serif text-primary font-normal tracking-wide">{c.dashboard}</h2>
-                      <p className="text-xs text-neutral-500 font-light mt-1">{c.dashboard_desc}</p>
+                      <h2 className="text-xl font-bold uppercase tracking-[0.2em] text-neutral-900">{c.dashboard}</h2>
+                      <p className="text-[10px] uppercase tracking-widest text-neutral-400 mt-2">{c.dashboard_desc}</p>
                       <div className="w-full h-[1px] bg-neutral-150 mt-4"></div>
                     </div>
 
@@ -1599,18 +1548,18 @@ const Account = () => {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div 
                         onClick={() => setActiveTab('orders')}
-                        className="group border border-neutral-200 p-6 bg-white hover:border-neutral-350 hover:shadow-xs transition-all duration-350 rounded-xl cursor-pointer flex flex-col justify-between min-h-[140px] shadow-3xs"
+                        className="group border border-neutral-200 p-6 bg-white hover:border-neutral-900 hover:shadow-md transition-all duration-350 rounded-none cursor-pointer flex flex-col justify-between min-h-[160px] shadow-3xs"
                       >
                         <div className="flex items-start justify-between">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 group-hover:text-neutral-700 transition-colors">{c.last_order}</span>
-                          <div className="w-8 h-8 rounded-lg bg-neutral-50 group-hover:bg-neutral-100 flex items-center justify-center text-accent transition-colors">
+                          <div className="w-8 h-8 rounded-none bg-neutral-50 group-hover:bg-neutral-100 flex items-center justify-center text-accent transition-colors">
                             <ShoppingBag className="w-4 h-4" />
                           </div>
                         </div>
                         <div className="mt-4">
-                          <p className="text-base font-bold text-neutral-800 tracking-wide truncate">{orders.length > 0 ? orders[0].reference : c.none}</p>
+                          <p className="text-sm font-black uppercase tracking-[0.1em] text-neutral-900 truncate">{orders.length > 0 ? orders[0].reference : c.none}</p>
                           <p className="text-[10px] text-neutral-400 mt-1 flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-accent"></span>
+                            <span className="w-1 h-1 rounded-none bg-accent"></span>
                             <span>{orders.length > 0 ? translateStatus(orders[0].status) : c.no_active_order}</span>
                           </p>
                         </div>
@@ -1618,18 +1567,18 @@ const Account = () => {
 
                       <div 
                         onClick={() => setActiveTab('addresses')}
-                        className="group border border-neutral-200 p-6 bg-white hover:border-neutral-350 hover:shadow-xs transition-all duration-350 rounded-xl cursor-pointer flex flex-col justify-between min-h-[140px] shadow-3xs"
+                        className="group border border-neutral-200 p-6 bg-white hover:border-neutral-900 hover:shadow-md transition-all duration-350 rounded-none cursor-pointer flex flex-col justify-between min-h-[160px] shadow-3xs"
                       >
                         <div className="flex items-start justify-between">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 group-hover:text-neutral-700 transition-colors">{c.delivery_address}</span>
-                          <div className="w-8 h-8 rounded-lg bg-neutral-50 group-hover:bg-neutral-100 flex items-center justify-center text-accent transition-colors">
+                          <div className="w-8 h-8 rounded-none bg-neutral-50 group-hover:bg-neutral-100 flex items-center justify-center text-accent transition-colors">
                             <MapPin className="w-4 h-4" />
                           </div>
                         </div>
                         <div className="mt-4">
-                          <p className="text-xs font-semibold text-neutral-850 truncate">{addresses.length > 0 ? (addresses[0].shipping_address || addresses[0].address) : c.not_configured}</p>
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-neutral-900 truncate">{addresses.length > 0 ? (addresses[0].shipping_address || addresses[0].address) : c.not_configured}</p>
                           <p className="text-[10px] text-neutral-400 mt-1 flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-neutral-300"></span>
+                            <span className="w-1 h-1 rounded-none bg-neutral-300"></span>
                             <span>{addresses.length > 0 ? addresses[0].city : c.configure_address}</span>
                           </p>
                         </div>
@@ -1637,16 +1586,16 @@ const Account = () => {
 
                       <div 
                         onClick={() => setActiveTab('favorites')}
-                        className="group border border-neutral-200 p-6 bg-white hover:border-neutral-350 hover:shadow-xs transition-all duration-350 rounded-xl cursor-pointer flex flex-col justify-between min-h-[140px] shadow-3xs"
+                        className="group border border-neutral-200 p-6 bg-white hover:border-neutral-900 hover:shadow-md transition-all duration-350 rounded-none cursor-pointer flex flex-col justify-between min-h-[160px] shadow-3xs"
                       >
                         <div className="flex items-start justify-between">
                           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 group-hover:text-neutral-700 transition-colors">{c.wishlist}</span>
-                          <div className="w-8 h-8 rounded-lg bg-neutral-50 group-hover:bg-neutral-100 flex items-center justify-center text-accent transition-colors">
+                          <div className="w-8 h-8 rounded-none bg-neutral-50 group-hover:bg-neutral-100 flex items-center justify-center text-accent transition-colors">
                             <Heart className="w-4 h-4" />
                           </div>
                         </div>
                         <div className="mt-4">
-                          <p className="text-base font-bold text-neutral-800 tracking-wide">{favorites.length} {favorites.length > 1 ? c.creations : c.creation}</p>
+                          <p className="text-sm font-black uppercase tracking-[0.1em] text-neutral-900">{favorites.length} {favorites.length > 1 ? c.creations : c.creation}</p>
                           <p className="text-[10px] text-primary group-hover:underline font-semibold mt-1">
                             {c.view_favorites}
                           </p>
@@ -1655,12 +1604,12 @@ const Account = () => {
                     </div>
 
                     {/* Prominent Active Tracking or Info card */}
-                    <div className="border border-neutral-200 p-6 bg-neutral-50/30 space-y-6 rounded-xl shadow-3xs">
+                    <div className="border border-neutral-200 p-6 bg-neutral-50/30 space-y-6 rounded-none shadow-3xs">
                       <div className="flex justify-between items-center border-b border-neutral-250/60 pb-4">
                         <div className="flex items-center gap-2">
                           <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-accent"></span>
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-none bg-accent opacity-75"></span>
+                            <span className="relative inline-flex rounded-none h-2 w-2 bg-accent"></span>
                           </span>
                           <span className="text-xs font-bold uppercase tracking-wider text-neutral-800">{c.recent_orders}</span>
                         </div>
@@ -1672,8 +1621,8 @@ const Account = () => {
                       {orders.length > 0 ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {orders.slice(0, 2).map((order, idx) => (
-                            <div key={idx} className="bg-white border border-neutral-200 p-4 flex gap-4 items-center shadow-2xs hover:shadow-xs transition-all rounded-xl">
-                              <div className="w-14 h-14 bg-neutral-50 shrink-0 border border-neutral-100 overflow-hidden rounded-lg">
+                            <div key={idx} className="bg-white border border-neutral-200 p-4 flex gap-4 items-center shadow-2xs hover:shadow-xs transition-all rounded-none">
+                              <div className="w-14 h-14 bg-neutral-50 shrink-0 border border-neutral-100 overflow-hidden rounded-none">
                                 {order.items?.[0]?.image ? (
                                   <img src={order.items[0].image} alt="produit" className="w-full h-full object-cover" />
                                 ) : (
@@ -1684,7 +1633,7 @@ const Account = () => {
                                 <h4 className="text-xs font-bold text-neutral-900 truncate">{order.reference}</h4>
                                 <p className="text-[10px] text-neutral-500 mt-0.5">{new Date(order.created_at).toLocaleDateString(locale === 'en' ? 'en-US' : 'fr-FR')}</p>
                                 <div className="mt-2 flex items-center justify-between">
-                                  <span className="text-[9px] font-bold uppercase tracking-widest text-accent bg-accent/5 border border-accent/20 px-2.5 py-0.5 rounded-full">{translateStatus(order.status)}</span>
+                                  <span className="text-[9px] font-bold uppercase tracking-widest text-accent bg-accent/5 border border-accent/20 px-2.5 py-0.5 rounded-none">{translateStatus(order.status)}</span>
                                   <button onClick={() => navigate(`/order-tracking/${order.reference}`)} className="text-[10px] font-semibold text-primary hover:text-accent transition-colors">{c.track_arrow}</button>
                                 </div>
                               </div>
@@ -1694,7 +1643,7 @@ const Account = () => {
                       ) : (
                         <div className="text-center py-8">
                           <p className="text-xs text-neutral-500 font-light">{c.no_recent_orders}</p>
-                          <button onClick={() => navigate('/catalog')} className="mt-4 bg-primary text-white py-2.5 px-6 text-[10px] font-bold uppercase tracking-widest transition-all hover:bg-neutral-800 rounded-lg cursor-pointer shadow-md shadow-primary/5">
+                          <button onClick={() => navigate('/catalog')} className="mt-4 bg-primary text-white py-2.5 px-6 text-[10px] font-bold uppercase tracking-widest transition-all hover:bg-neutral-800 rounded-none cursor-pointer shadow-md shadow-primary/5">
                             {c.discover_collections}
                           </button>
                         </div>
@@ -1707,8 +1656,8 @@ const Account = () => {
                 {activeTab === 'profile' && (
                   <div className="space-y-8 animate-fade-in">
                     <div>
-                      <h2 className="text-xl font-serif text-primary font-normal tracking-wide">{c.profile_security}</h2>
-                      <p className="text-xs text-neutral-500 font-light mt-1">{c.profile_security_desc}</p>
+                      <h2 className="text-xl font-bold uppercase tracking-[0.2em] text-neutral-900">{c.profile_security}</h2>
+                      <p className="text-[10px] uppercase tracking-widest text-neutral-400 mt-2">{c.profile_security_desc}</p>
                       <div className="w-full h-[1px] bg-neutral-100 mt-4"></div>
                     </div>
 
@@ -1722,7 +1671,7 @@ const Account = () => {
                           </h3>
                         </div>
                         
-                        <form onSubmit={handleUpdateProfile} className="bg-white border border-neutral-200 p-8 space-y-5 rounded-xl shadow-3xs">
+                        <form onSubmit={handleUpdateProfile} className="bg-white border border-neutral-200 p-8 space-y-5 rounded-none shadow-3xs">
                           <div className="space-y-1.5">
                             <label className="text-[10px] font-bold uppercase tracking-wider text-neutral-600">{c.full_name}</label>
                             <input
@@ -1730,7 +1679,7 @@ const Account = () => {
                               required
                               value={profileName}
                               onChange={(e) => setProfileName(e.target.value)}
-                              className="w-full py-3 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-lg transition-all placeholder-neutral-400 font-light"
+                              className="w-full py-3 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-none transition-all placeholder-neutral-400 font-light"
                             />
                           </div>
                           
@@ -1740,7 +1689,7 @@ const Account = () => {
                               type="email"
                               value={customerUser?.email || ''}
                               disabled
-                              className="w-full py-3 px-4 text-xs bg-neutral-100/50 border border-neutral-200 text-neutral-400 cursor-not-allowed rounded-lg"
+                              className="w-full py-3 px-4 text-xs bg-neutral-100/50 border border-neutral-200 text-neutral-400 cursor-not-allowed rounded-none"
                             />
                           </div>
 
@@ -1751,14 +1700,14 @@ const Account = () => {
                               value={profilePhone}
                               onChange={(e) => setProfilePhone(e.target.value)}
                               placeholder={c.not_provided}
-                              className="w-full py-3 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-lg transition-all placeholder-neutral-400 font-light"
+                              className="w-full py-3 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-none transition-all placeholder-neutral-400 font-light"
                             />
                           </div>
 
                           <button
                             type="submit"
                             disabled={profileLoading}
-                            className="w-full bg-primary hover:bg-neutral-850 text-white py-3.5 text-xs font-semibold uppercase tracking-widest transition-all rounded-lg flex items-center justify-center gap-2 mt-6 cursor-pointer shadow-md shadow-primary/5"
+                            className="w-full bg-primary hover:bg-neutral-850 text-white py-3.5 text-xs font-semibold uppercase tracking-widest transition-all rounded-none flex items-center justify-center gap-2 mt-6 cursor-pointer shadow-md shadow-primary/5"
                           >
                             {profileLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : c.save_changes}
                           </button>
@@ -1774,9 +1723,9 @@ const Account = () => {
                           </h3>
                         </div>
 
-                        <div className="bg-white border border-neutral-200 p-8 rounded-xl shadow-3xs">
+                        <div className="bg-white border border-neutral-200 p-8 rounded-none shadow-3xs">
                           {success && passwordLoading === false && (
-                            <div className="bg-green-50 border border-emerald-250 text-emerald-700 p-4 text-xs mb-6 font-medium rounded-lg flex items-start gap-3 shadow-2xs">
+                            <div className="bg-green-50 border border-emerald-250 text-emerald-700 p-4 text-xs mb-6 font-medium rounded-none flex items-start gap-3 shadow-2xs">
                               <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
                               <span>{success}</span>
                             </div>
@@ -1790,7 +1739,7 @@ const Account = () => {
                                 required
                                 value={currentPassword}
                                 onChange={(e) => setCurrentPassword(e.target.value)}
-                                className="w-full py-3 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-lg transition-all placeholder-neutral-400 font-light"
+                                className="w-full py-3 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-none transition-all placeholder-neutral-400 font-light"
                                 placeholder="••••••••"
                               />
                             </div>
@@ -1804,7 +1753,7 @@ const Account = () => {
                                 required
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
-                                className="w-full py-3 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-lg transition-all placeholder-neutral-400 font-light"
+                                className="w-full py-3 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-none transition-all placeholder-neutral-400 font-light"
                                 placeholder="••••••••"
                               />
                             </div>
@@ -1816,7 +1765,7 @@ const Account = () => {
                                 required
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
-                                className="w-full py-3 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-lg transition-all placeholder-neutral-400 font-light"
+                                className="w-full py-3 px-4 text-xs bg-neutral-50 border border-neutral-200 focus:bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-none transition-all placeholder-neutral-400 font-light"
                                 placeholder="••••••••"
                               />
                             </div>
@@ -1824,7 +1773,7 @@ const Account = () => {
                             <button
                               type="submit"
                               disabled={passwordLoading}
-                              className="w-full bg-primary hover:bg-neutral-850 text-white py-3.5 text-xs font-semibold uppercase tracking-widest transition-all rounded-lg flex items-center justify-center gap-2 mt-6 cursor-pointer shadow-md shadow-primary/5"
+                              className="w-full bg-primary hover:bg-neutral-850 text-white py-3.5 text-xs font-semibold uppercase tracking-widest transition-all rounded-none flex items-center justify-center gap-2 mt-6 cursor-pointer shadow-md shadow-primary/5"
                             >
                               {passwordLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : c.update_password}
                             </button>
@@ -1839,13 +1788,13 @@ const Account = () => {
                 {activeTab === 'orders' && (
                   <div className="space-y-8 animate-fade-in">
                     <div>
-                      <h2 className="text-xl font-serif text-primary font-normal tracking-wide">{c.order_history}</h2>
-                      <p className="text-xs text-neutral-500 font-light mt-1">{c.order_history_desc}</p>
+                      <h2 className="text-xl font-bold uppercase tracking-[0.2em] text-neutral-900">{c.order_history}</h2>
+                      <p className="text-[10px] uppercase tracking-widest text-neutral-400 mt-2">{c.order_history_desc}</p>
                       <div className="w-full h-[1px] bg-neutral-100 mt-4"></div>
                     </div>
 
                     {orders.length === 0 ? (
-                      <div className="text-center py-16 border border-dashed border-neutral-200 rounded-xl bg-neutral-50/20">
+                      <div className="text-center py-16 border border-dashed border-neutral-200 rounded-none bg-neutral-50/20">
                         <ShoppingBag className="w-8 h-8 text-neutral-300 mx-auto mb-3" />
                         <p className="text-xs text-neutral-400 font-light">{c.no_orders_recorded}</p>
                         <button onClick={() => navigate('/catalog')} className="mt-4 text-xs font-semibold text-primary uppercase tracking-widest hover:underline flex items-center gap-1.5 mx-auto cursor-pointer border-none bg-transparent">
@@ -1870,7 +1819,7 @@ const Account = () => {
                             const isExpanded = !!expandedOrders[ord.reference];
 
                             return (
-                              <div key={i} className="border border-neutral-200 bg-white rounded-xl shadow-3xs hover:border-neutral-300 transition-all duration-300 relative overflow-hidden group">
+                              <div key={i} className="border border-neutral-200 bg-white rounded-none shadow-3xs hover:border-neutral-300 transition-all duration-300 relative overflow-hidden group">
                                 {/* Accordion Header */}
                                 <button
                                   type="button"
@@ -1898,7 +1847,7 @@ const Account = () => {
 
                                     {/* Status Pill */}
                                     <div className="col-span-2 md:col-span-2 flex md:justify-end">
-                                      <span className={`inline-flex items-center gap-1.5 py-0.5 px-2.5 text-[9px] uppercase font-bold tracking-widest rounded-full border ${
+                                      <span className={`inline-flex items-center gap-1.5 py-0.5 px-2.5 text-[9px] uppercase font-bold tracking-widest rounded-none border ${
                                         isCancelled 
                                           ? 'border-red-200 bg-red-50 text-red-655' 
                                           : isDelivered
@@ -1908,7 +1857,7 @@ const Account = () => {
                                         {isDelivered ? (
                                           <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                                         ) : (
-                                          <span className={`w-1 h-1 rounded-full ${
+                                          <span className={`w-1 h-1 rounded-none ${
                                             isCancelled ? 'bg-red-500' : 'bg-neutral-500'
                                           }`} />
                                         )}
@@ -1938,7 +1887,7 @@ const Account = () => {
                                       
                                       {isDelivered ? (
                                         <div className="flex flex-wrap items-center gap-3 self-start sm:self-auto">
-                                          <span className="inline-flex items-center gap-1.5 py-1.5 px-3 bg-neutral-100 text-neutral-500 rounded-lg text-[10px] font-bold uppercase tracking-wider border border-neutral-200/50">
+                                          <span className="inline-flex items-center gap-1.5 py-1.5 px-3 bg-neutral-100 text-neutral-500 rounded-none text-[10px] font-bold uppercase tracking-wider border border-neutral-200/50">
                                             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                                             {c.already_delivered}
                                           </span>
@@ -1946,7 +1895,7 @@ const Account = () => {
                                             type="button"
                                             disabled={downloadingInvoiceRef === ord.reference}
                                             onClick={() => handlePrintInvoice(ord)}
-                                            className="inline-flex items-center gap-1.5 text-[10px] bg-white border border-neutral-250 hover:bg-neutral-50 text-neutral-700 font-bold uppercase tracking-widest py-1.5 px-3.5 transition-colors rounded-lg cursor-pointer text-center shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
+                                            className="inline-flex items-center gap-1.5 text-[10px] bg-white border border-neutral-250 hover:bg-neutral-50 text-neutral-700 font-bold uppercase tracking-widest py-1.5 px-3.5 transition-colors rounded-none cursor-pointer text-center shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
                                           >
                                             {downloadingInvoiceRef === ord.reference ? (
                                               <Loader2 className="w-3.5 h-3.5 animate-spin text-neutral-500" />
@@ -1962,7 +1911,7 @@ const Account = () => {
                                         <button
                                           type="button"
                                           onClick={() => navigate(`/order-tracking/${ord.reference}`)}
-                                          className="self-start sm:self-auto text-[10px] bg-primary hover:bg-neutral-850 text-white font-bold uppercase tracking-widest py-2 px-4.5 transition-colors rounded-lg cursor-pointer text-center shadow-xs"
+                                          className="self-start sm:self-auto text-[10px] bg-primary hover:bg-neutral-850 text-white font-bold uppercase tracking-widest py-2 px-4.5 transition-colors rounded-none cursor-pointer text-center shadow-xs"
                                         >
                                           {c.track_package}
                                         </button>
@@ -1972,7 +1921,7 @@ const Account = () => {
                                     {/* Progress Bar Timeline */}
                                     {!isCancelled && (
                                       <div className="relative px-1 py-2">
-                                        <div className="overflow-hidden h-1 text-xs flex rounded-full bg-neutral-100 border border-neutral-200/20">
+                                        <div className="overflow-hidden h-1 text-xs flex rounded-none bg-neutral-100 border border-neutral-200/20">
                                           <div style={{ width: `${progress}%` }} className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-accent transition-all duration-1000"></div>
                                         </div>
                                         <div className="flex justify-between mt-2.5 text-[8px] font-bold uppercase tracking-widest text-neutral-400">
@@ -1991,7 +1940,7 @@ const Account = () => {
                                       </div>
                                       {ord.items?.map((item, idx) => (
                                         <div key={idx} className="flex gap-4 items-center">
-                                          <div className="w-12 h-12 bg-neutral-50 border border-neutral-100 shrink-0 overflow-hidden rounded-lg">
+                                          <div className="w-12 h-12 bg-neutral-50 border border-neutral-100 shrink-0 overflow-hidden rounded-none">
                                             {item.image ? (
                                               <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                                             ) : (
@@ -2019,7 +1968,7 @@ const Account = () => {
 
                         {/* Order Tracking details / concierge status widget */}
                         <div className="xl:col-span-2 space-y-6">
-                          <div className="border border-neutral-200 p-8 bg-neutral-50/20 rounded-xl shadow-3xs">
+                          <div className="border border-neutral-200 p-8 bg-neutral-50/20 rounded-none shadow-3xs">
                             <h4 className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-2 mb-4">
                               <Compass className="w-4 h-4 text-accent" />
                               {c.shipping_service}
@@ -2028,15 +1977,15 @@ const Account = () => {
                               {c.shipping_service_desc}
                             </p>
                             <div className="space-y-3.5">
-                              <div className="flex gap-3 items-center text-xs text-neutral-700 bg-white p-3.5 border border-neutral-200/80 rounded-xl shadow-2xs">
+                              <div className="flex gap-3 items-center text-xs text-neutral-700 bg-white p-3.5 border border-neutral-200/80 rounded-none shadow-2xs">
                                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                                 <span className="font-medium text-neutral-800">{c.luxury_packaging}</span>
                               </div>
-                              <div className="flex gap-3 items-center text-xs text-neutral-700 bg-white p-3.5 border border-neutral-200/80 rounded-xl shadow-2xs">
+                              <div className="flex gap-3 items-center text-xs text-neutral-700 bg-white p-3.5 border border-neutral-200/80 rounded-none shadow-2xs">
                                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                                 <span className="font-medium text-neutral-800">{c.signature_required}</span>
                               </div>
-                              <div className="flex gap-3 items-center text-xs text-neutral-700 bg-white p-3.5 border border-neutral-200/80 rounded-xl shadow-2xs">
+                              <div className="flex gap-3 items-center text-xs text-neutral-700 bg-white p-3.5 border border-neutral-200/80 rounded-none shadow-2xs">
                                 <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                                 <span className="font-medium text-neutral-800">{c.full_insurance}</span>
                               </div>
@@ -2052,8 +2001,8 @@ const Account = () => {
                 {activeTab === 'addresses' && (
                   <div className="space-y-8 animate-fade-in">
                     <div>
-                      <h2 className="text-xl font-serif text-primary font-normal tracking-wide">{c.my_addresses}</h2>
-                      <p className="text-xs text-neutral-500 font-light mt-1">{c.my_addresses_desc}</p>
+                      <h2 className="text-xl font-bold uppercase tracking-[0.2em] text-neutral-900">{c.my_addresses}</h2>
+                      <p className="text-[10px] uppercase tracking-widest text-neutral-400 mt-2">{c.my_addresses_desc}</p>
                       <div className="w-full h-[1px] bg-neutral-100 mt-4"></div>
                     </div>
                     
@@ -2061,9 +2010,9 @@ const Account = () => {
                       {/* Plus Card for adding address */}
                       <div
                         onClick={() => setIsAddressModalOpen(true)}
-                        className="group border-2 border-dashed border-neutral-300 hover:border-neutral-800 bg-neutral-50/20 hover:bg-neutral-50/50 p-6 flex flex-col items-center justify-center min-h-[200px] cursor-pointer transition-all rounded-xl select-none text-center"
+                        className="group border-2 border-dashed border-neutral-300 hover:border-neutral-800 bg-neutral-50/20 hover:bg-neutral-50/50 p-6 flex flex-col items-center justify-center min-h-[200px] cursor-pointer transition-all rounded-none select-none text-center"
                       >
-                        <div className="w-12 h-12 rounded-full border border-neutral-300 flex items-center justify-center text-neutral-400 group-hover:text-neutral-800 group-hover:border-neutral-800 mb-4 transition-all">
+                        <div className="w-12 h-12 rounded-none border border-neutral-300 flex items-center justify-center text-neutral-400 group-hover:text-neutral-800 group-hover:border-neutral-800 mb-4 transition-all">
                           <span className="text-2xl font-light leading-none">+</span>
                         </div>
                         <span className="text-xs font-bold uppercase tracking-wider text-neutral-500 group-hover:text-neutral-800 transition-colors">
@@ -2075,7 +2024,7 @@ const Account = () => {
                       {addresses.map((addr, i) => {
                         const isDefault = addr.is_default || (i === 0 && addresses.every(a => !a.is_default));
                         return (
-                          <div key={i} className="border border-neutral-200 bg-white hover:border-neutral-400 hover:shadow-xs transition-all duration-300 rounded-xl p-6 flex flex-col justify-between min-h-[200px] relative">
+                          <div key={i} className="border border-neutral-200 bg-white hover:border-neutral-400 hover:shadow-xs transition-all duration-300 rounded-none p-6 flex flex-col justify-between min-h-[200px] relative">
                             <div>
                               {/* Header info */}
                               <div className="flex justify-between items-start gap-4 mb-4 pb-3 border-b border-neutral-150">
@@ -2132,7 +2081,7 @@ const Account = () => {
                               <button
                                 onClick={() => handleDeleteAddress(addr.id)}
                                 disabled={addressLoading}
-                                className="w-7 h-7 flex items-center justify-center bg-white border border-neutral-250 text-neutral-400 hover:text-danger hover:border-danger hover:bg-red-50 disabled:opacity-50 transition-all rounded-sm cursor-pointer"
+                                className="w-7 h-7 flex items-center justify-center bg-white border border-neutral-250 text-neutral-400 hover:text-danger hover:border-danger hover:bg-red-50 disabled:opacity-50 transition-all rounded-none cursor-pointer"
                                 title={c.delete_address_title}
                               >
                                 {addressLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
@@ -2149,8 +2098,8 @@ const Account = () => {
                 {activeTab === 'favorites' && (
                   <div className="space-y-8 animate-fade-in">
                     <div>
-                      <h2 className="text-xl font-serif text-primary font-normal tracking-wide">{c.my_wishlist}</h2>
-                      <p className="text-xs text-neutral-500 font-light mt-1">{c.my_wishlist_desc}</p>
+                      <h2 className="text-xl font-bold uppercase tracking-[0.2em] text-neutral-900">{c.my_wishlist}</h2>
+                      <p className="text-[10px] uppercase tracking-widest text-neutral-400 mt-2">{c.my_wishlist_desc}</p>
                       <div className="w-full h-[1px] bg-neutral-100 mt-4"></div>
                     </div>
 
@@ -2168,11 +2117,11 @@ const Account = () => {
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {favorites.map((item) => (
-                          <div key={item.id} className="flex gap-4 p-4 border border-neutral-200 bg-white rounded-xl shadow-3xs hover:border-neutral-300 hover:shadow-xs transition-all duration-300">
+                          <div key={item.id} className="flex gap-4 p-4 border border-neutral-200 bg-white rounded-none shadow-3xs hover:border-neutral-300 hover:shadow-xs transition-all duration-300">
                             <img
                               src={item.image || (item.images?.[0]?.url) || 'https://images.unsplash.com/photo-1549298916-b41d501d3772?q=80&w=2012'}
                               alt={item.name}
-                              className="w-20 h-24 object-cover bg-neutral-100 border border-neutral-200 shrink-0 rounded-lg animate-scale-in"
+                              className="w-20 h-24 object-cover bg-neutral-100 border border-neutral-200 shrink-0 rounded-none animate-scale-in"
                             />
                             <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
                               <div>
@@ -2206,6 +2155,7 @@ const Account = () => {
 
               </div>
             </div>
+            </div>
           </div>
         )}
         {activeQuickAddProduct && createPortal(
@@ -2225,7 +2175,7 @@ const Account = () => {
             />
             <div 
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-lg bg-white p-7 md:p-8 border border-neutral-200 shadow-2xl rounded-xl z-10 text-left overflow-y-auto max-h-[90vh]">
+              className="relative w-full max-w-lg bg-white p-7 md:p-8 border border-neutral-200 shadow-2xl rounded-none z-10 text-left overflow-y-auto max-h-[90vh]">
               <button
                 onClick={() => setIsAddressModalOpen(false)}
                 className="absolute top-4 right-4 text-neutral-400 hover:text-neutral-600 p-1 text-2xl font-light leading-none focus:outline-none"
@@ -2283,7 +2233,7 @@ const Account = () => {
                     <button
                       type="button"
                       onClick={() => setDeliveryCountry('CI')}
-                      className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-all select-none text-left bg-transparent ${
+                      className={`flex items-center justify-between p-3 rounded-none border-2 cursor-pointer transition-all select-none text-left bg-transparent ${
                         deliveryCountry === 'CI'
                           ? 'border-neutral-900 shadow-sm font-bold text-neutral-900 bg-neutral-50'
                           : 'border-neutral-200 hover:border-neutral-400 text-neutral-500'
@@ -2298,7 +2248,7 @@ const Account = () => {
                     <button
                       type="button"
                       onClick={() => { setDeliveryCountry('OTHER'); setSelectedRegion(''); setSelectedCommune(''); }}
-                      className={`flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-all select-none text-left bg-transparent ${
+                      className={`flex items-center justify-between p-3 rounded-none border-2 cursor-pointer transition-all select-none text-left bg-transparent ${
                         deliveryCountry === 'OTHER'
                           ? 'border-neutral-900 shadow-sm font-bold text-neutral-900 bg-neutral-50'
                           : 'border-neutral-200 hover:border-neutral-400 text-neutral-500'
@@ -2324,7 +2274,7 @@ const Account = () => {
                         value={selectedRegion}
                         onChange={(e) => setSelectedRegion(e.target.value)}
                         required
-                        className="w-full border border-neutral-300 rounded-lg py-2.5 px-3 text-xs bg-white focus:outline-none focus:border-neutral-900 h-11"
+                        className="w-full border border-neutral-300 rounded-none py-2.5 px-3 text-xs bg-white focus:outline-none focus:border-neutral-900 h-11"
                       >
                         <option value="">Sélectionner</option>
                         {regions.map((reg) => (
@@ -2342,7 +2292,7 @@ const Account = () => {
                         onChange={(e) => setSelectedCommune(e.target.value)}
                         required
                         disabled={!selectedRegion}
-                        className="w-full border border-neutral-300 rounded-lg py-2.5 px-3 text-xs bg-white focus:outline-none focus:border-neutral-900 h-11 disabled:bg-neutral-50 disabled:border-neutral-200"
+                        className="w-full border border-neutral-300 rounded-none py-2.5 px-3 text-xs bg-white focus:outline-none focus:border-neutral-900 h-11 disabled:bg-neutral-50 disabled:border-neutral-200"
                       >
                         <option value="">Sélectionner</option>
                         {communes.map((com) => (
@@ -2393,7 +2343,6 @@ const Account = () => {
           </div>,
           document.body
         )}
-      </div>
     </div>
   );
 };

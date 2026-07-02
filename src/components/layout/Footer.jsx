@@ -134,33 +134,61 @@ export const Footer = () => {
 
   const activeSocials = Object.entries(config.socials || {}).filter(([, url]) => url && url.trim() !== '');
 
-  return (
-    <footer className="bg-neutral-950 text-neutral-400 border-t border-neutral-800">
-      {/* Bande supérieure – contact & réseaux */}
-      {(config.phone || config.email || activeSocials.length > 0) && (
-        <div className="border-b border-neutral-800/60">
-          <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px]">
-            <div className="flex items-center gap-5">
-              {config.phone && (
-                <a href={`tel:${config.phone}`} className="flex items-center gap-1.5 hover:text-white transition-colors">
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.948V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-                  </svg>
-                  <span className="font-medium">{config.phone}</span>
-                </a>
-              )}
-              {config.email && (
-                <a href={`mailto:${config.email}`} className="flex items-center gap-1.5 hover:text-white transition-colors">
-                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                  </svg>
-                  <span className="font-medium">{config.email}</span>
-                </a>
-              )}
-            </div>
+    <footer className="bg-neutral-950 text-neutral-400">
+      {/* Corps principal */}
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-10 lg:py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-8 lg:gap-10">
+          
+          {/* Colonne Gauche : Logo, Description, Contacts, Réseaux */}
+          <div className="flex flex-col gap-4 md:pr-8">
+            <Link to="/">
+              <img
+                src="/logo.png"
+                alt="HA-KAVOD 97 Logo"
+                className="h-20 md:h-24 w-auto object-contain transition-transform duration-500 hover:scale-105 origin-left"
+              />
+            </Link>
+            
+            {(config.description || config.country) && (
+              <div className="space-y-4">
+                {config.description && (
+                  <p className="text-[13px] leading-relaxed text-neutral-400 font-light max-w-sm">{config.description}</p>
+                )}
+                {config.country && (
+                  <p className="text-[10px] uppercase tracking-widest text-neutral-500 font-bold">{config.country}</p>
+                )}
+              </div>
+            )}
+
+            {/* Contacts (Téléphone & Email) */}
+            {(config.phone || config.email) && (
+              <div className="flex flex-col gap-3 pt-2">
+                {config.phone && (
+                  <a href={`tel:${config.phone}`} className="flex items-center gap-3 w-fit text-[13px] hover:text-white transition-colors group">
+                    <span className="w-8 h-8 rounded-full border border-neutral-800 flex items-center justify-center group-hover:border-neutral-600 transition-colors">
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.948V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                      </svg>
+                    </span>
+                    <span className="font-light tracking-wide">{config.phone}</span>
+                  </a>
+                )}
+                {config.email && (
+                  <a href={`mailto:${config.email}`} className="flex items-center gap-3 w-fit text-[13px] hover:text-white transition-colors group">
+                    <span className="w-8 h-8 rounded-full border border-neutral-800 flex items-center justify-center group-hover:border-neutral-600 transition-colors">
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                      </svg>
+                    </span>
+                    <span className="font-light tracking-wide">{config.email}</span>
+                  </a>
+                )}
+              </div>
+            )}
+
             {/* Réseaux sociaux */}
             {activeSocials.length > 0 && (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 pt-2">
                 {activeSocials.map(([key, url]) => {
                   const Icon = SOCIAL_ICONS[key];
                   if (!Icon) return null;
@@ -171,49 +199,27 @@ export const Footer = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                       title={key.charAt(0).toUpperCase() + key.slice(1)}
-                      className="w-7 h-7 rounded-full border border-neutral-700 flex items-center justify-center text-neutral-400 hover:text-white hover:border-white transition-all duration-200"
+                      className="w-10 h-10 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 hover:text-white hover:border-neutral-500 hover:bg-neutral-800 transition-all duration-300"
                     >
-                      <Icon />
+                      <Icon className="w-4 h-4" />
                     </a>
                   );
                 })}
               </div>
             )}
           </div>
-        </div>
-      )}
-
-      {/* Corps principal */}
-      <div className="max-w-7xl mx-auto px-4 md:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] gap-10">
-          {/* Colonne Logo + Description */}
-          <div className="flex flex-col gap-4">
-            <Link to="/">
-              <img
-                src="/logo.png"
-                alt="HA-KAVOD 97 Logo"
-                className="h-24 w-auto object-contain transition-transform duration-300 hover:scale-105"
-              />
-            </Link>
-            {config.description && (
-              <p className="text-xs leading-relaxed text-neutral-500">{config.description}</p>
-            )}
-            {config.country && (
-              <p className="text-[10px] uppercase tracking-widest text-neutral-600 font-bold">{config.country}</p>
-            )}
-          </div>
 
           {/* Colonnes de liens (dynamiques depuis la BDD) */}
-          <div className={`grid gap-8 text-xs ${
+          <div className={`grid gap-8 pt-4 lg:pt-0 ${
             config.columns?.length >= 3
-              ? 'grid-cols-2 sm:grid-cols-3'
+              ? 'grid-cols-2 md:grid-cols-3'
               : config.columns?.length === 2
               ? 'grid-cols-2'
               : 'grid-cols-1'
           }`}>
             {(config.columns || []).map((col, idx) => (
               <div key={idx}>
-                <h4 className="font-bold text-white mb-4 uppercase tracking-widest text-[11px]">
+                <h4 className="font-medium text-white mb-4 uppercase tracking-widest text-[12px]">
                   {col.title}
                 </h4>
                 <ul className="flex flex-col gap-2.5">
@@ -222,7 +228,7 @@ export const Footer = () => {
                       {link.url?.startsWith('/') ? (
                         <Link
                           to={link.url}
-                          className="hover:text-white transition-colors duration-150"
+                          className="text-[13px] text-neutral-400 hover:text-white hover:translate-x-1 inline-block transition-all duration-300 font-light"
                         >
                           {link.name}
                         </Link>
@@ -231,7 +237,7 @@ export const Footer = () => {
                           href={link.url || '#'}
                           target={link.url?.startsWith('http') ? '_blank' : undefined}
                           rel="noopener noreferrer"
-                          className="hover:text-white transition-colors duration-150"
+                          className="text-[13px] text-neutral-400 hover:text-white hover:translate-x-1 inline-block transition-all duration-300 font-light"
                         >
                           {link.name}
                         </a>
@@ -246,29 +252,29 @@ export const Footer = () => {
       </div>
 
       {/* Barre inférieure */}
-      <div className="border-t border-neutral-900">
-        <div className="max-w-7xl mx-auto px-4 md:px-8 py-5 flex flex-col md:flex-row items-center justify-between gap-4 text-[10px] text-neutral-500">
+      <div className="border-t border-neutral-900 bg-neutral-950">
+        <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 flex flex-col md:flex-row items-center justify-between gap-4 text-[11px] text-neutral-500 font-light">
           <span>&copy; {new Date().getFullYear()} Ha‑kavod 97. Tous droits réservés.</span>
 
           {/* Logos de paiement */}
-          <div className="flex gap-2 items-center opacity-60 hover:opacity-100 transition-opacity">
-            <div className="w-9 h-6 bg-[#FF6600] rounded-sm flex items-center justify-center" title="Orange Money">
-              <span className="text-white text-[6px] font-black uppercase">Orange</span>
+          <div className="flex gap-3 items-center opacity-70 hover:opacity-100 transition-opacity duration-300 grayscale hover:grayscale-0">
+            <div className="w-10 h-7 bg-[#FF6600] rounded flex items-center justify-center" title="Orange Money">
+              <span className="text-white text-[7px] font-black uppercase tracking-wider">Orange</span>
             </div>
-            <div className="w-9 h-6 bg-[#FFCC00] rounded-sm flex items-center justify-center" title="MTN Mobile Money">
-              <span className="text-neutral-950 font-black text-[7px]">MTN</span>
+            <div className="w-10 h-7 bg-[#FFCC00] rounded flex items-center justify-center" title="MTN Mobile Money">
+              <span className="text-neutral-950 font-black text-[8px] tracking-wider">MTN</span>
             </div>
-            <div className="w-9 h-6 bg-[#0066cc] rounded-sm flex items-center justify-center" title="Moov Money">
-              <span className="text-white font-black text-[7px]">MOOV</span>
+            <div className="w-10 h-7 bg-[#0066cc] rounded flex items-center justify-center" title="Moov Money">
+              <span className="text-white font-black text-[8px] tracking-wider">MOOV</span>
             </div>
-            <div className="w-9 h-6 bg-white rounded-sm flex items-center justify-center border border-neutral-800" title="Visa">
-              <svg className="h-3 w-6 text-[#1A1F71]" viewBox="0 0 200 65" fill="currentColor">
+            <div className="w-10 h-7 bg-white rounded flex items-center justify-center border border-neutral-800" title="Visa">
+              <svg className="h-3.5 w-7 text-[#1A1F71]" viewBox="0 0 200 65" fill="currentColor">
                 <path d="M78.6,4.7L62.7,46.9h-8.9L44.2,14.6c-1.8-7.1-7.2-9.7-13.4-10v0.4h14.7c3.3,0,6.2,2.2,7,5.5l8.3,44h9.1L87.7,4.7H78.6z"/>
                 <polygon points="200,4.7 186.2,46.9 178,46.9 191.8,4.7"/>
               </svg>
             </div>
-            <div className="w-9 h-6 bg-white rounded-sm flex items-center justify-center border border-neutral-800" title="Mastercard">
-              <svg className="h-4 w-7" viewBox="0 0 100 60">
+            <div className="w-10 h-7 bg-white rounded flex items-center justify-center border border-neutral-800" title="Mastercard">
+              <svg className="h-4.5 w-8" viewBox="0 0 100 60">
                 <circle cx="40" cy="30" r="20" fill="#EB001B" opacity="0.9"/>
                 <circle cx="60" cy="30" r="20" fill="#F79E1B" opacity="0.9"/>
                 <path d="M50,17.3A20,20 0 0 1 50,42.7A20,20 0 0 1 50,17.3" fill="#FF5F00"/>

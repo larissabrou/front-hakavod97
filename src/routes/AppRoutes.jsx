@@ -511,8 +511,8 @@ const StorefrontLayout = ({ children }) => {
               </select>
             </div>
 
-            <button
-              onClick={() => setIsAuthOpen(true)}
+            <Link
+              to="/account"
               className={actionIconClass}
               title={isAuthenticated ? `${t('logged_in_as')} ${customerUser.name}` : t('login_signup')}
             >
@@ -520,7 +520,7 @@ const StorefrontLayout = ({ children }) => {
               {isAuthenticated && (
                 <span className="absolute top-0 right-0 w-2 h-2 bg-green-500 rounded-full border border-white" />
               )}
-            </button>
+            </Link>
 
             <button
               onClick={() => setIsFavoritesOpen(true)}
@@ -557,7 +557,7 @@ const StorefrontLayout = ({ children }) => {
       />
 
       {/* Zone du contenu des pages */}
-      <div className={`flex-grow ${isHomePage ? "" : "pt-24 md:pt-40"}`}>
+      <div className={`flex-grow ${(isHomePage || location.pathname === '/account') ? "" : "pt-24 md:pt-40"}`}>
         {children}
       </div>
 
@@ -1222,52 +1222,15 @@ const StorefrontLayout = ({ children }) => {
       )}
 
       {/* Footer minimaliste */}
-      <footer className="bg-neutral-950 text-neutral-400 py-8 md:py-12 px-4 md:px-8 border-t border-neutral-800">
-        <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-left text-xs">
+      <footer className="bg-neutral-950 text-neutral-400 py-10 md:py-12 px-4 md:px-8 border-t border-neutral-800">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_2fr] gap-10 md:gap-12 text-left text-xs">
           
-          {/* Colonnes dynamiques 1, 2, 3 */}
-          {(footerConfig.columns || DEFAULT_FOOTER_CONFIG.columns).map((col, cIdx) => (
-            <div key={cIdx}>
-              <h4 className="font-bold text-white mb-4 uppercase tracking-widest text-[11px]">{tFooter(col.title, activeLocale)}</h4>
-              <ul className="flex flex-col gap-2.5">
-                {(col.links || []).map((link, lIdx) => {
-                  const isExternal = link.url.startsWith('http') || link.url.startsWith('#');
-                  const content = (
-                    <span className="flex items-center gap-1.5">
-                      {link.icon && (
-                        <svg className="w-3.5 h-3.5 text-neutral-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <circle cx="12" cy="12" r="10" />
-                          <polygon points="10 8 16 12 10 16 10 8" fill="currentColor" />
-                        </svg>
-                      )}
-                      {tFooter(link.name, activeLocale)}
-                    </span>
-                  );
-
-                  return (
-                    <li key={lIdx}>
-                      {isExternal ? (
-                        <a href={link.url} className="hover:text-white transition-colors">
-                          {content}
-                        </a>
-                      ) : (
-                        <Link to={link.url} className="hover:text-white transition-colors">
-                          {content}
-                        </Link>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ))}
-
-          {/* Colonne 4 : Logo, Contact, Réseaux et Pays */}
-          <div className="flex flex-col gap-4">
+          {/* Colonne Gauche : Logo, Contact, Réseaux et Pays */}
+          <div className="flex flex-col gap-5 md:pr-8">
             <img
               src="/logo.png"
               alt="HA-KAVOD 97 Logo"
-              className="h-32 w-auto object-contain self-start bg-transparent"
+              className="h-20 w-auto object-contain self-start bg-transparent"
             />
             <div>
               <p className="leading-relaxed text-neutral-400 text-[10.5px]">
@@ -1278,7 +1241,7 @@ const StorefrontLayout = ({ children }) => {
             </div>
             
             {/* Contact details */}
-            <div className="pt-2 border-t border-neutral-900">
+            <div className="pt-2">
               <h4 className="font-bold text-white mb-2 uppercase tracking-widest text-[10px]">{activeLocale === 'en' ? "Contact" : "Contact"}</h4>
               <ul className="flex flex-col gap-1 text-[11px] text-neutral-400">
                 {footerConfig.phone && (
@@ -1340,13 +1303,52 @@ const StorefrontLayout = ({ children }) => {
 
             {/* Globe Pays */}
             {footerConfig.country && (
-              <div className="flex items-center gap-2 mt-2 pt-2 border-t border-neutral-900">
+              <div className="flex items-center gap-2 mt-2 pt-2">
                 <Globe className="w-3.5 h-3.5 text-neutral-500 shrink-0" />
                 <span className="text-[10px] text-neutral-400 font-semibold uppercase tracking-wider select-none">
                   {footerConfig.country}
                 </span>
               </div>
             )}
+          </div>
+
+          {/* Colonnes dynamiques 1, 2, 3 */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-8 pt-6 lg:pt-0">
+            {(footerConfig.columns || DEFAULT_FOOTER_CONFIG.columns).map((col, cIdx) => (
+              <div key={cIdx}>
+              <h4 className="font-bold text-white mb-4 uppercase tracking-widest text-[11px]">{tFooter(col.title, activeLocale)}</h4>
+              <ul className="flex flex-col gap-2.5">
+                {(col.links || []).map((link, lIdx) => {
+                  const isExternal = link.url.startsWith('http') || link.url.startsWith('#');
+                  const content = (
+                    <span className="flex items-center gap-1.5">
+                      {link.icon && (
+                        <svg className="w-3.5 h-3.5 text-neutral-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <circle cx="12" cy="12" r="10" />
+                          <polygon points="10 8 16 12 10 16 10 8" fill="currentColor" />
+                        </svg>
+                      )}
+                      {tFooter(link.name, activeLocale)}
+                    </span>
+                  );
+
+                  return (
+                    <li key={lIdx}>
+                      {isExternal ? (
+                        <a href={link.url} className="hover:text-white transition-colors">
+                          {content}
+                        </a>
+                      ) : (
+                        <Link to={link.url} className="hover:text-white transition-colors">
+                          {content}
+                        </Link>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
           </div>
         </div>
         <div className="max-w-7xl mx-auto border-t border-neutral-900 mt-6 md:mt-10 pt-6 flex flex-col md:flex-row items-center justify-between gap-4 text-[10px] text-neutral-500">
